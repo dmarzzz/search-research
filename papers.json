@@ -18,5 +18,15 @@
     { "id": "1703.05175", "title": "Prototypical Networks for Few-Shot Learning", "year": "2017", "why": "Old but load-bearing. Class as centroid in embedding space. Best baseline for low-label regimes." },
     { "id": "2307.16265", "title": "Recent Advances in Hierarchical Multi-Label Text Classification: A Survey", "year": "Jul 2023", "why": "Reference for the multi-tier tagging problem; surveys tree, flat-with-constraints, and contrastive approaches." },
     { "id": "2604.04997", "title": "Evaluation of Embedding-Based and Generative Methods for LLM-Driven Document Classification", "year": "2025", "why": "Hybrid stack benchmark — embedding-classifier + LLM-fallback on ambiguous cases. Cuts LLM cost ~95%." }
+  ],
+  "evaluation": [
+    { "id": "2309.15217", "title": "RAGAS: Automated Evaluation of Retrieval Augmented Generation", "year": "Sep 2023", "why": "The reference for reference-free RAG eval. Faithfulness / context precision / context recall / answer relevance. Still SOTA in 2026 with v1.2 dynamic recalibration." },
+    { "id": "2510.21440", "title": "eRAG: Redefining Retrieval Evaluation in the Era of LLMs", "year": "Oct 2025", "why": "Utility-based: score each doc by running RAG with only that doc. 50× lower GPU memory than full RAG eval; higher Kendall's τ." },
+    { "id": "2504.14891", "title": "RAG Evaluation in the Era of LLMs: Survey", "year": "Apr 2025", "why": "LLM-as-judge has become 2× more prevalent than traditional metrics. Surveys failure modes." },
+    { "id": "2602.20379", "title": "Case-Aware LLM-as-Judge for Enterprise RAG", "year": "2026", "why": "Calibration: label 50–100 manually, measure judge TPR/TNR, correct raw scores. Practical." }
+  ],
+  "memory": [
+    { "id": "2504.15965", "title": "From Human Memory to AI Memory: A Survey", "year": "Apr 2025", "why": "Lilian Weng et al. The reference framing for episodic vs semantic vs procedural memory in agents. Includes the privacy attack: 69% attribute leakage from episodic memory." },
+    { "id": "2309.02427", "title": "Cognitive Architectures for Language Agents (CoALA)", "year": "Sep 2023", "why": "Princeton/CMU. Formalizes consolidation: how episodic events become semantic patterns. Foundational for 'dreaming.'" }
   ]
 }

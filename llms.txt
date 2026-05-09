@@ -66,5 +66,25 @@ See `agents.json` for the full table. Patterns:
 - arXiv:2501.09136 — Agentic RAG survey
 - arXiv:2307.03172 — Lost in the Middle
 - arXiv:2404.06654 — RULER long-context benchmark
+- arXiv:2510.21440 — eRAG (utility-based eval, 50× cheaper)
+- arXiv:2309.15217 — RAGAS (still SOTA in 2026)
+- arXiv:2504.15965 — From Human Memory to AI Memory
+- arXiv:2309.02427 — CoALA (cognitive architectures, the consolidation framing)
 
 Full annotated list in `papers.json`.
+
+## the next-step questions covered (sections 10-13 of index.html)
+
+- **Exposing your corpus to agents via MCP** — minimal server is ~100 lines
+  with `search()` + `get()`. Reference impls: modelcontextprotocol/servers
+  (memory, filesystem, git, fetch), vurtnec/mcp-LanceDB-node.
+- **Ingestion** — slackdump for Slack, Zoom AI Companion API for meetings,
+  WhisperX + pyannote v4 for raw audio. No turnkey "drop your data, get a
+  corpus" tool exists — bash + python glue, ~200 lines per source.
+- **Evaluation without labels** — diagnostic queries (20-30 hand-crafted
+  smoke tests) + synthetic queries from LLM + RAGAS or eRAG. 1-day minimum
+  harness: 500 synthetic + 25 diagnostic, ~$5-20 LLM spend.
+- **Personal memory frontier** — three approaches: personal RAG, memory
+  layer (Mem0/Letta/Honcho/Zep), fine-tuning. For one-user, filesystem-
+  based memory (Claude Code, Cursor) is winning over DB-backed. The bet
+  is observability: files you can read.

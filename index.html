@@ -707,7 +707,188 @@ python -c "import lancedb; db = lancedb.connect('./index.lance')"
     Anthropic's own Claude Code uses <b>filesystem-as-memory</b>. No vector DB. Files you can grep, version, and diff. That's exactly the "corpus as source of truth" pattern from section 08 — proven at scale by the team that builds the agent the user is talking to right now.
   </div>
 
-  <h2><span class="num">10</span>Frontier papers</h2>
+  <h2><span class="num">10</span>Exposing your corpus via MCP</h2>
+  <p>The bridge from "I have a working search index" to "Claude Code / Cursor / any agent can query my corpus" is an <a href="https://modelcontextprotocol.io" target="_blank">MCP server</a>. ~100 lines of Python in the minimal case. Below: what to expose, what to copy, what to skip.</p>
+
+  <h3>tool surface — what to expose</h3>
+  <div class="lb-wrap">
+    <table class="lb">
+      <thead>
+        <tr><th>Tool</th><th>Signature</th><th>When to expose</th></tr>
+      </thead>
+      <tbody>
+        <tr class="pick-row"><td><span class="name">search</span></td><td><code>search(query: str, limit: int = 5) → SearchResult[]</code></td><td>always — the core capability</td></tr>
+        <tr class="pick-row"><td><span class="name">get</span></td><td><code>get(doc_id: str) → Document</code></td><td>always — model needs to fetch full content after a hit</td></tr>
+        <tr><td><span class="name">similar_to</span></td><td><code>similar_to(doc_id: str, limit: int = 5)</code></td><td>once you have embeddings, this is free</td></tr>
+        <tr><td><span class="name">list_tags</span></td><td><code>list_tags() → Tag[]</code></td><td>when tagging exists; helps the model filter</td></tr>
+        <tr><td><span class="name">recent</span></td><td><code>recent(n: int, tag?: str) → DocumentRef[]</code></td><td>when freshness matters (slack, transcripts)</td></tr>
+        <tr><td><span class="name">search_within_dates</span></td><td><code>search(q, after: date, before: date)</code></td><td>once you have date metadata; usually a parameter on search rather than a separate tool</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>reference servers worth reading</h3>
+  <ul>
+    <li><a href="https://github.com/modelcontextprotocol/servers/tree/main/src/memory" target="_blank">modelcontextprotocol/servers/memory</a> — Anthropic's knowledge-graph memory server. Best for: how to model entity-relation observations.</li>
+    <li><a href="https://github.com/modelcontextprotocol/servers/tree/main/src/filesystem" target="_blank">filesystem</a> — permission boundary pattern (`allowed_directories` env var). Copy this for sandboxing.</li>
+    <li><a href="https://github.com/modelcontextprotocol/servers/tree/main/src/git" target="_blank">git</a> — handles large result sets via streaming + structured snippets. Copy for paginating search hits.</li>
+    <li><a href="https://github.com/vurtnec/mcp-LanceDB-node" target="_blank">vurtnec/mcp-LanceDB-node</a> — LanceDB-specific MCP server. Most relevant reference for what we're building.</li>
+    <li><a href="https://github.com/modelcontextprotocol/servers/tree/main/src/fetch" target="_blank">fetch</a> — returns structured JSON (title/text/links) with `outputSchema`. Best example of typed responses.</li>
+  </ul>
+
+  <h3>schema design — what makes a tool the model actually calls</h3>
+  <ul>
+    <li><b>Flat input schemas.</b> Don't nest. <code>search(q, tag, after_date, limit)</code> beats <code>search({filters: {tag, dates: {start, end}}})</code>.</li>
+    <li><b>Action-driven names.</b> <code>search_corpus</code> &gt; <code>query</code>. <code>recent_docs</code> &gt; <code>list_recent</code>.</li>
+    <li><b>Use <code>outputSchema</code></b> (MCP 2025-06-18+). Strict JSON typing makes responses parseable without prompting.</li>
+    <li><b>Description = when to call.</b> "Find documents semantically similar to a known document. Use when the user wants related reading." &gt; "Returns related docs."</li>
+    <li><b>Return structured JSON, not markdown.</b> Let the client format. Saves tokens, enables filtering downstream.</li>
+  </ul>
+
+  <h3>the minimal MCP server</h3>
+<pre><span class="kw">from</span> mcp.server <span class="kw">import</span> Server
+<span class="kw">import</span> lancedb
+
+server = Server(<span class="str">"corpus-search"</span>)
+db = lancedb.<span class="fn">connect</span>(<span class="str">"./index.lance"</span>)
+
+<span class="com"># minimum: search + get</span>
+@server.tool()
+<span class="kw">def</span> <span class="fn">search</span>(query: str, limit: int = <span class="str">5</span>) -> list[dict]:
+    <span class="str">"""Search the personal corpus by semantic + keyword. Returns top hits with snippets."""</span>
+    hits = db.<span class="fn">open_table</span>(<span class="str">"docs"</span>).<span class="fn">search</span>(query).<span class="fn">limit</span>(limit).<span class="fn">to_list</span>()
+    <span class="kw">return</span> [{<span class="str">"id"</span>: h[<span class="str">"id"</span>], <span class="str">"score"</span>: h[<span class="str">"_score"</span>], <span class="str">"snippet"</span>: h[<span class="str">"text"</span>][:<span class="str">240</span>]} <span class="kw">for</span> h <span class="kw">in</span> hits]
+
+@server.tool()
+<span class="kw">def</span> <span class="fn">get</span>(doc_id: str) -> dict:
+    <span class="str">"""Fetch the full content of a document by id."""</span>
+    <span class="kw">return</span> db.<span class="fn">open_table</span>(<span class="str">"docs"</span>).<span class="fn">search</span>().<span class="fn">where</span>(<span class="str">f"id = '{doc_id}'"</span>).<span class="fn">to_list</span>()[<span class="str">0</span>]
+
+server.<span class="fn">run</span>()
+</pre>
+
+  <p>Wire that into Claude Code's <code>~/.claude/mcp_servers.json</code> and you're done. The agent can search and read your corpus. Skip pagination, auth, observability until you actually need them.</p>
+
+  <h2><span class="num">11</span>Ingestion — getting clean markdown out of slack/zoom/otter</h2>
+  <p>This is where most personal-corpus projects die — the data is locked in vendor formats. The honest 2026 path:</p>
+
+  <div class="lb-wrap">
+    <table class="lb">
+      <thead>
+        <tr><th>Source</th><th>Tool</th><th>Output</th><th>Friction</th></tr>
+      </thead>
+      <tbody>
+        <tr class="pick-row"><td><span class="name">Slack</span></td><td><a href="https://github.com/rusq/slackdump" target="_blank">rusq/slackdump</a> v4.3</td><td>JSON or text-export</td><td>low — handles threads, attachments, edits, deletes natively</td></tr>
+        <tr><td><span class="name">Zoom</span></td><td>Zoom AI Companion API</td><td><code>.vtt</code> / <code>.srt</code></td><td>medium — no batch endpoint; loop over meetings</td></tr>
+        <tr><td><span class="name">Otter</span></td><td>API (business tier)</td><td><code>.vtt</code>, PDF</td><td>high — paywall</td></tr>
+        <tr><td><span class="name">Fathom</span></td><td>API</td><td>JSON</td><td>medium — rate-limited</td></tr>
+        <tr><td><span class="name">Granola</span></td><td>none — copy-paste</td><td>—</td><td>very high — no programmatic export</td></tr>
+        <tr><td><span class="name">Read.ai</span></td><td>API (limited)</td><td>JSON summary</td><td>high — full transcripts not exposed</td></tr>
+        <tr><td><span class="name">Grain</span></td><td>API</td><td><code>.vtt</code></td><td>medium — video-first, no bulk endpoint</td></tr>
+        <tr class="pick-row"><td><span class="name">raw audio</span></td><td><a href="https://github.com/m-bain/whisperX" target="_blank">WhisperX</a> + <a href="https://github.com/pyannote/pyannote-audio" target="_blank">pyannote v4</a></td><td>diarized markdown</td><td>local, free; ~3-5× real-time on M-series</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>the clean-markdown contract</h3>
+<pre>---
+date: 2026-05-09
+source: zoom
+attendees: [Alice, Bob]
+duration_minutes: 45
+tags: [strategy, q4]
+---
+
+# Topic Title
+
+**Alice** (00:00–00:30)
+Opening remarks...
+
+**Bob** (00:30–01:15)
+Response...
+</pre>
+
+  <p>YAML frontmatter for metadata + tags, speaker-labeled prose with timestamps. Survives every embedding model, every search frontend, every export.</p>
+
+  <div class="callout warn">
+    <span class="tag">honest take</span>
+    No turnkey "drop a year of meetings, get a corpus" tool exists in 2026. Bash skeleton + Python glue, ~200 lines per source. Slackdump → JSON → markdown converter is ~50 lines. Zoom → vtt → markdown is ~30 lines. WhisperX gives you diarized markdown directly. Build this once, run it on a schedule.
+  </div>
+
+  <h2><span class="num">12</span>Evaluating without labels</h2>
+  <p>The personal-corpus problem: no golden query-doc pairs, can't run BEIR, can't compute MAP. So how do you know your search works?</p>
+
+  <h3>the eval methods, in order of effort:value</h3>
+  <ol>
+    <li><b>Diagnostic suite</b> — write 20–30 hand-crafted "if my search can't answer this, it's broken" queries covering: edge cases, multi-hop, negation, date filters, rare entities. Manual. <i>Irreplaceable.</i></li>
+    <li><b>Synthetic queries</b> — LLM generates 3–10 queries per sampled doc with varied prompts (short-keyword, short-verbose, long-verbose) to avoid overly-easy queries. Compute Recall@k, nDCG@5.</li>
+    <li><b>LLM-as-judge</b> — present (query, retrieved-doc) pairs to an LLM, ask "is this relevant?". Use binary, not 0–100. Run 3× per pair; measure judge agreement.</li>
+    <li><b>RAGAS</b> (<a href="https://docs.ragas.io" target="_blank">ragas v1.2</a>) — bundles synthetic queries + LLM-judge for faithfulness, context precision/recall, answer relevance. Still SOTA in 2026.</li>
+    <li><b>eRAG</b> (<a href="https://arxiv.org/abs/2510.21440" target="_blank">arXiv:2510.21440</a>) — utility-based: score each doc by running RAG with only that doc as context. 50× lower GPU memory than full RAG eval. Higher Kendall's τ.</li>
+    <li><b>Cluster coherence</b> — for tagging, use silhouette + topic coherence (CV / NPMI). Aim for silhouette &gt; 0.5, coherence &gt; 0.65. Manual eyeball of top-5 words per cluster catches drift the metrics miss.</li>
+    <li><b>Drift detection</b> — log query → top-k weekly. KL/Jensen-Shannon divergence vs baseline. Flag &gt; 0.1.</li>
+  </ol>
+
+  <div class="callout warn">
+    <span class="tag">LLM-judge gotchas</span>
+    Numeric 0–100 scoring drifts; use binary. Single calls are noisy; run 3× and measure agreement. Calibrate by hand-labeling 50–100 examples and measuring TPR/TNR — then correct the judge's raw rates: <code>actual_rate = TPR · predicted + (1 − TNR) · (1 − predicted)</code>.
+  </div>
+
+  <h3>the 1-day minimum harness</h3>
+  <ul>
+    <li>Generate 500 synthetic queries (5 per 100 sampled docs)</li>
+    <li>Run Recall@10 and nDCG@5 against your baseline embedding</li>
+    <li>Hand-write 25 diagnostic queries; manually label pass/fail</li>
+    <li>Compare 2–3 embedding models on diagnostics; pick winner</li>
+    <li>Wire weekly drift log: query, top-k, KL-divergence alert at p&lt;0.05</li>
+  </ul>
+  <p>~2-3 hours human time, $5-20 LLM API spend. Result: you'll know if search works and catch degradation. <i>Don't build a full RAGAS harness until you have 10k+ monthly queries.</i></p>
+
+  <h2><span class="num">13</span>From search to "knows me" — the personal memory frontier</h2>
+  <p class="big">Once search works, the next question is: should the agent <i>remember</i> things across sessions? The 2026 design space splits cleanly into three approaches with different bets about what humans + AI need to retain.</p>
+
+  <h3>the three approaches</h3>
+  <ul>
+    <li><b>Personal RAG</b> — retrieval over your own corpus. No learning, no consolidation. Fastest, dumbest, cheapest. <i>What we've been building.</i></li>
+    <li><b>Memory layer</b> (Mem0, Letta, Honcho, Zep) — service that manages memory lifecycle: write, retrieve, consolidate, expire. Tracks preferences, patterns, conflicts ("I changed my mind about X").</li>
+    <li><b>Fine-tuning</b> — bake preferences into model parameters. Expensive to update, stale by inference time. Rarely worth it for personal use.</li>
+  </ul>
+
+  <h3>memory frameworks — the head-to-head</h3>
+  <div class="lb-wrap">
+    <table class="lb">
+      <thead>
+        <tr><th>Framework</th><th>What it remembers</th><th>Consolidation</th><th>Best for</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><span class="name">Mem0</span></td><td>facts, preferences (vectors)</td><td>vector clustering</td><td>simple chatbots; 49% on LongMemEval</td></tr>
+        <tr><td><span class="name">Zep</span></td><td>temporal entity graph</td><td>graph reduction</td><td>complex workflows; 64% on LongMemEval</td></tr>
+        <tr><td><span class="name">Letta</span></td><td>everything (agents manage own memory)</td><td>LLM reflection</td><td>day-long agents; OS-inspired tiers</td></tr>
+        <tr><td><span class="name">Honcho</span></td><td>cross-app user models</td><td>implicit (async)</td><td>cross-platform personalization</td></tr>
+        <tr class="pick-row"><td><span class="name">Claude Managed Agents</span></td><td>whatever agent writes to <code>/mnt/memory/</code></td><td><b>"dreaming"</b> (scheduled)</td><td>single user, auditable, versionable</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p><b>Why filesystem is winning for personal use:</b> filesystems are <i>observable</i>. You can read your own memory. Cursor, Claude Code, and Cline all mount memory as directories because it maps to how developers already reason about state. Databases hide structure; files make it auditable. Plus, no network round-trip for retrieval.</p>
+
+  <h3>the Tulving distinction matters</h3>
+  <p><b>Episodic memory</b> = "I failed the pipeline on March 3 because schema changed." <b>Semantic memory</b> = "this pipeline is fragile around migrations." Frontier work (<a href="https://arxiv.org/abs/2309.02427" target="_blank">CoALA</a>) formalizes <i>consolidation</i>: how episodes become semantic patterns. For personal AI, episodic matters most — you want the agent to remember <i>your</i> specifics.</p>
+
+  <div class="callout note">
+    <span class="tag">privacy</span>
+    Embeddings leak sensitive attributes via cosine similarity (<a href="https://arxiv.org/abs/2504.15965" target="_blank">arXiv:2504.15965</a> reports ~94% accuracy reconstructing medical diagnoses; ~69% attribute-level privacy violations from episodic memory). Application-layer encryption before sending to vector DB is the standard. Embeddings are not opaque.
+  </div>
+
+  <h3>the honest take for an audience of one</h3>
+  <ol>
+    <li>Start with <b>RAG + filesystem</b>. Embed your corpus locally, mount agent memory as files. Fast, auditable, costs almost nothing.</li>
+    <li>If you need <b>preferences or learned patterns</b>, add a memory layer (Claude Managed Agents on Anthropic API; Letta if open).</li>
+    <li><b>Don't fine-tune</b> unless you have 10k+ examples and a fixed domain.</li>
+    <li><b>Don't build multi-source memory yet</b> — the tooling isn't unified. Pull data on demand via APIs.</li>
+  </ol>
+
+  <h2><span class="num">14</span>Frontier papers</h2>
   <p>The papers that matter for what you're trying to do. Each one is a load-bearing reference for a section above. arXiv IDs are clickable.</p>
 
   <h3>embedding &amp; retrieval</h3>
@@ -719,11 +900,17 @@ python -c "import lancedb; db = lancedb.connect('./index.lance')"
   <h3>tagging &amp; classification</h3>
   <div class="papers" id="papers-tagging"></div>
 
-  <h2><span class="num">11</span>Frontier code &amp; tools</h2>
+  <h3>retrieval evaluation</h3>
+  <div class="papers" id="papers-evaluation"></div>
+
+  <h3>memory &amp; cognition</h3>
+  <div class="papers" id="papers-memory"></div>
+
+  <h2><span class="num">15</span>Frontier code &amp; tools</h2>
   <p>Repos that are actually maintained and worth pulling. ★ marks what I'd pull first.</p>
   <div class="repos" id="repos"></div>
 
-  <h2><span class="num">12</span>Things to ignore</h2>
+  <h2><span class="num">16</span>Things to ignore</h2>
   <ul>
     <li><b>"Frameworks"</b> — LlamaIndex, Haystack. Enterprise-shaped. Save more time than they cost only if you have ≥3 engineers.</li>
     <li><b>Atlas, Pinecone, Weaviate Cloud</b> — managed vector DBs. ~$50-500/mo for capacity you won't use at this scale.</li>
@@ -732,7 +919,7 @@ python -c "import lancedb; db = lancedb.connect('./index.lance')"
     <li><b>Re-embedding every time the model changes</b> — embeddings are durable. Pick a good one once, keep using it. Re-embedding is a 1-time hour-long batch when you upgrade.</li>
   </ul>
 
-  <h2><span class="num">13</span>Open questions worth running experiments on</h2>
+  <h2><span class="num">17</span>Open questions worth running experiments on</h2>
   <ul>
     <li>Does <b>late chunking</b> (Jina v3) actually beat naive chunking on your specific transcript style? Worth A/B-ing.</li>
     <li>Is the <b>hybrid retrieve → top-50 → 1M-context model</b> pattern better than retrieve → top-5 → smaller model? Probably yes for hard questions, no for find-similar.</li>
@@ -875,7 +1062,7 @@ async function loadPapers() {
   try {
     const r = await fetch('papers.json');
     const data = await r.json();
-    ['embedding', 'rag', 'tagging'].forEach(k => {
+    ['embedding', 'rag', 'tagging', 'evaluation', 'memory'].forEach(k => {
       document.getElementById(`papers-${k}`).innerHTML = data[k].map(p => `
         <div class="paper">
           <div class="id">
