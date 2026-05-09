@@ -4,6 +4,9 @@ Research notes + recommendations for searching and tagging a corpus of
 ~30k transcripts, internal memos, and Slack messages. Focus: 2026
 frontier in models, infrastructure, and methods. Bias toward local-first.
 
+**Live page:** https://dmarzzz.github.io/search-research/
+**Agent-readable summary:** https://dmarzzz.github.io/search-research/llms.txt
+
 ## What's here
 
 - `index.html` — the research page itself. Open in a browser.

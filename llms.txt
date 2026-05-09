@@ -4,12 +4,19 @@ A research page on the 2026 frontier of corpus search and tagging — for a
 ~30k-doc personal corpus of transcripts, internal memos, and Slack
 messages. Local-first bias, opinionated, all sources cited.
 
+## live url
+
+- page:        https://dmarzzz.github.io/search-research/
+- repo:        https://github.com/dmarzzz/search-research
+- this file:   https://dmarzzz.github.io/search-research/llms.txt
+
 ## what to read first
 
-- `index.html` — the full research page, served at http://127.0.0.1:8424
+- `index.html` — the full research page, also at the live url above
 - `agents.json` — production-agent stack table (Goose, Claude Code, Hermes,
   Honcho, Letta, Mem0, Zep, Cognee, LangGraph, Dust)
-- `papers.json` — frontier paper bibliography by area (embedding, RAG, tagging)
+- `papers.json` — frontier paper bibliography by area (embedding, RAG,
+  tagging, evaluation, memory)
 - `stacks.json` — corpus-size keyed stack recommendations (1k / 30k / 1M / 100M)
 
 All four are agent-fetchable. The HTML is enriched with JSON-LD describing
