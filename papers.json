@@ -1,0 +1,22 @@
+{
+  "embedding": [
+    { "id": "2405.17428", "title": "NV-Embed: Improved Techniques for Training LLMs as Generalist Embedding Models", "year": "May 2024", "why": "Decoder-only LLM as embedding backbone. Topped MTEB for over a year." },
+    { "id": "2402.09906", "title": "GritLM: Generative Representational Instruction Tuning", "year": "Feb 2024", "why": "Single model that does both generation and embeddings. Opens design space beyond specialists." },
+    { "id": "2412.03223", "title": "Linq-Embed-Mistral Technical Report", "year": "Dec 2024", "why": "Strong open retrieval model; beats most APIs on MTEB-retrieval (60.2)." },
+    { "id": "2409.04701", "title": "Late Chunking: Contextual Chunk Embeddings Using Long-Context Embedding Models", "year": "Sep 2024", "why": "Apply transformer to full doc, chunk *after* — preserves cross-chunk context. Now in Jina v3." },
+    { "id": "2408.16672", "title": "Jina-ColBERT-v2: A General-Purpose Multilingual Late Interaction Retriever", "year": "Aug 2024", "why": "Multilingual late-interaction; proves the approach still works if you need fine-grained scoring." }
+  ],
+  "rag": [
+    { "id": "2412.15605", "title": "Don't Do RAG: When Cache-Augmented Generation Is All You Need for Knowledge Tasks", "year": "Dec 2024", "why": "The 'CAG' paper. Preload corpus into KV cache; query against cached state. Works for ≤1M tokens." },
+    { "id": "2505.08261", "title": "Enhancing Cache-Augmented Generation with Adaptive Contextual Compression", "year": "May 2025", "why": "Extends CAG with selective compression. Pushes the corpus-size ceiling." },
+    { "id": "2501.09136", "title": "Agentic Retrieval-Augmented Generation: A Survey", "year": "Jan 2025", "why": "Definitive overview of how RAG became a tool inside agents instead of a pipeline. 34→89% jumps on multi-hop." },
+    { "id": "2307.03172", "title": "Lost in the Middle: How Language Models Use Long Contexts", "year": "Jul 2023", "why": "The original problem statement. Models forget the middle of long contexts. Still true in 2026 — Opus 4.7 regressed on this." },
+    { "id": "2404.06654", "title": "RULER: What's the Real Context Size of Your Long-Context Language Models?", "year": "Apr 2024", "why": "Benchmark beyond simple needle-in-haystack. Most models with 1M-token windows score much lower than they advertise." },
+    { "id": "2509.21865", "title": "Beyond RAG vs. Long-Context: Distraction-Aware Retrieval", "year": "Sep 2025", "why": "Argues neither pure-RAG nor pure-long-context is correct; retrieval should learn to ignore distractors." }
+  ],
+  "tagging": [
+    { "id": "1703.05175", "title": "Prototypical Networks for Few-Shot Learning", "year": "2017", "why": "Old but load-bearing. Class as centroid in embedding space. Best baseline for low-label regimes." },
+    { "id": "2307.16265", "title": "Recent Advances in Hierarchical Multi-Label Text Classification: A Survey", "year": "Jul 2023", "why": "Reference for the multi-tier tagging problem; surveys tree, flat-with-constraints, and contrastive approaches." },
+    { "id": "2604.04997", "title": "Evaluation of Embedding-Based and Generative Methods for LLM-Driven Document Classification", "year": "2025", "why": "Hybrid stack benchmark — embedding-classifier + LLM-fallback on ambiguous cases. Cuts LLM cost ~95%." }
+  ]
+}

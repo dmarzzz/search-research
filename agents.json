@@ -1,0 +1,136 @@
+{
+  "agents": [
+    {
+      "name": "Goose",
+      "by": "Block",
+      "repo": "block/goose",
+      "storage": "SQLite (local sessions)",
+      "embedding": "delegated to MCP / model provider",
+      "vector_store": "via MCP servers (pluggable)",
+      "mcp": "first-class — every tool is an MCP server",
+      "license": "Apache 2.0",
+      "interesting": "Pure MCP-first architecture: the agent itself is a thin shell, every capability (memory, search, files) is a swappable MCP server. Treats memory as a tool you bring, not a feature it ships."
+    },
+    {
+      "name": "Claude Code (Anthropic)",
+      "by": "Anthropic",
+      "repo": "anthropic/claude-code",
+      "storage": "Filesystem + .claude/ directory + memory files",
+      "embedding": "none — handled by Claude in-context",
+      "vector_store": "files (no DB)",
+      "mcp": "first-class",
+      "license": "proprietary",
+      "interesting": "Memory-as-files. Every memory is a markdown file you can grep, version, diff, edit. No vector DB. The 'index' is your filesystem. Auditable by design."
+    },
+    {
+      "name": "Hermes Agent",
+      "by": "Nous Research",
+      "repo": "nousresearch/hermes-agent",
+      "storage": "SQLite + FTS5",
+      "embedding": "HRR (Holographic Reduced Representations)",
+      "vector_store": "FTS5 full-text + algebraic memory",
+      "mcp": "yes",
+      "license": "Apache 2.0",
+      "interesting": "Algebraic memory instead of semantic chunks. HRR lets you compose/decompose memories with vector arithmetic. Novel; the storage is boring SQLite, the cleverness is the representation."
+    },
+    {
+      "name": "Honcho",
+      "by": "Plastic Labs",
+      "repo": "plastic-labs/honcho",
+      "storage": "Postgres + pgvector",
+      "embedding": "pluggable (OpenAI / Anthropic / Google)",
+      "vector_store": "pgvector",
+      "mcp": "no",
+      "license": "Apache 2.0",
+      "interesting": "Middleware — sits in front of any LLM app and adds peer-centric memory. Async reasoning derives 'conclusions' about each user. Not a full agent, a memory layer."
+    },
+    {
+      "name": "Letta (was MemGPT)",
+      "by": "Letta AI",
+      "repo": "letta-ai/letta",
+      "storage": "SQLite (dev) / Postgres (prod)",
+      "embedding": "pluggable (OpenAI default)",
+      "vector_store": "Chroma (archival) + Postgres (recall)",
+      "mcp": "limited",
+      "license": "Apache 2.0",
+      "interesting": "Tiered memory: core (in context) + recall (recent history) + archival (vector search). The reference implementation for 'agent with batteries-included memory.' Worth reading even if you don't use it."
+    },
+    {
+      "name": "Mem0",
+      "by": "Mem0 AI",
+      "repo": "mem0ai/mem0",
+      "storage": "Docker, pluggable",
+      "embedding": "OpenAI text-embedding-3-small (default)",
+      "vector_store": "Qdrant (default)",
+      "mcp": "no",
+      "license": "Apache 2.0",
+      "interesting": "Multi-level: User / Session / Agent. Single-pass extraction + entity linking. Memory-as-a-service shape — opinionated about hierarchy, less about backend."
+    },
+    {
+      "name": "Zep",
+      "by": "Zep AI",
+      "repo": "getzep/zep",
+      "storage": "Postgres",
+      "embedding": "unspecified / pluggable",
+      "vector_store": "Graphiti (temporal knowledge graph)",
+      "mcp": "no",
+      "license": "Apache 2.0",
+      "interesting": "Time-aware memory. Every fact has a 'valid_at' window. The bet: temporal context matters as much as semantic similarity. Niche but right for some use cases."
+    },
+    {
+      "name": "Cognee",
+      "by": "Topoteretes",
+      "repo": "topoteretes/cognee",
+      "storage": "Neo4j or KuzuDB",
+      "embedding": "pluggable",
+      "vector_store": "graph-first hybrid (KG + vectors)",
+      "mcp": "no",
+      "license": "Apache 2.0",
+      "interesting": "Knowledge-graph-first. Embeddings are secondary, relationships primary. Heavy if your data isn't relational; powerful if it is."
+    },
+    {
+      "name": "LangGraph",
+      "by": "LangChain",
+      "repo": "langchain-ai/langgraph",
+      "storage": "Postgres / MongoDB / Redis",
+      "embedding": "delegated",
+      "vector_store": "PostgresStore / MongoDBStore / RedisStore",
+      "mcp": "no native",
+      "license": "MIT",
+      "interesting": "Splits memory into 'checkpoint' (run state) and 'Store' (long-term). Not a memory system itself, but the split has been adopted by other frameworks."
+    },
+    {
+      "name": "Dust",
+      "by": "Dust",
+      "repo": "dust-tt/dust",
+      "storage": "Postgres",
+      "embedding": "OpenAI / Anthropic",
+      "vector_store": "Qdrant (5000+ data sources at scale)",
+      "mcp": "no",
+      "license": "MIT",
+      "interesting": "Production at scale. Their published case studies show vector DB tuning becomes the bottleneck before retrieval quality does. Reference for 'this works in a real org.'"
+    }
+  ],
+  "patterns": [
+    {
+      "title": "There's no consensus storage backend",
+      "detail": "Postgres for stateful servers (Letta, Honcho, LangGraph). Filesystem for sandboxed agents (Claude). SQLite for local dev. Pick by deployment, not by trend."
+    },
+    {
+      "title": "Almost no one ships their own embeddings",
+      "detail": "Every framework defers to OpenAI / Anthropic / Ollama. text-embedding-3-small is the default-of-defaults. This means: pick your embedding model independently of your framework."
+    },
+    {
+      "title": "The memory-tier split is real and worth copying",
+      "detail": "Letta's core/recall/archival and LangGraph's checkpoint/Store both reflect the same insight: short-term context and long-term retrieval are different problems. Don't try to solve them in one layer."
+    },
+    {
+      "title": "MCP adoption is bimodal",
+      "detail": "Goose and Claude treat MCP as first-class. Most others don't mention it. If you're in the Anthropic ecosystem, lean into MCP. Otherwise it's optional."
+    },
+    {
+      "title": "Filesystem-based memory is having a moment",
+      "detail": "Anthropic's bet: files are the simplest, most auditable, most portable memory. They version, diff, grep. No DB to migrate. No schema to evolve. For personal/team scale, it's hard to beat."
+    }
+  ]
+}

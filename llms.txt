@@ -1,0 +1,70 @@
+# search-research
+
+A research page on the 2026 frontier of corpus search and tagging — for a
+~30k-doc personal corpus of transcripts, internal memos, and Slack
+messages. Local-first bias, opinionated, all sources cited.
+
+## what to read first
+
+- `index.html` — the full research page, served at http://127.0.0.1:8424
+- `agents.json` — production-agent stack table (Goose, Claude Code, Hermes,
+  Honcho, Letta, Mem0, Zep, Cognee, LangGraph, Dust)
+- `papers.json` — frontier paper bibliography by area (embedding, RAG, tagging)
+- `stacks.json` — corpus-size keyed stack recommendations (1k / 30k / 1M / 100M)
+
+All four are agent-fetchable. The HTML is enriched with JSON-LD describing
+which dataset URLs are which, so an agent that respects `application/ld+json`
+can discover the right file without parsing markup.
+
+## the recommended stack (~30k docs, local-first)
+
+```
+corpus/                  ← markdown/txt files, source of truth
+  *.md (yaml frontmatter for tags)
+index.lance/             ← LanceDB single-file store (regeneratable)
+config.yaml              ← embedding model + chunking choices
+search.py                ← ~150 lines, exposes index() / search() / tag()
+```
+
+Four dependencies: `lancedb`, `ollama`, `pyyaml`, `click`.
+Default embedding: `nomic-embed-text:v1.5` via Ollama.
+Default reranker: none in v1; add `bge-reranker-v2-gemma` if measured-needed.
+Tagging: BERTopic for clustering, prototype networks for k-NN, Cleanlab
+for label hygiene. LLM (Haiku) only as fallback for ambiguous cases.
+
+## key insight
+
+The corpus folder is the source of truth. The vector index is
+**regeneratable** at any time from the corpus. That single property is
+what keeps the whole stack pluggable: you can swap the embedding model,
+swap the vector store, swap the search frontend, all by re-running
+`reindex` against the same files.
+
+## what to skip
+
+- 2023-style RAG pipeline (chunk → embed → store → retrieve → rerank → stuff → synthesize) — replaced by hybrid retrieval + agentic search-as-tool
+- Pure long-context "stuff everything in" — RULER and Lost-in-the-Middle show 30-50% accuracy drop past 200k tokens
+- Heavy frameworks (LlamaIndex, Haystack) at this scale — complexity cost > time saved
+- Managed vector DBs (Pinecone, Weaviate) at this scale — pay-rent SaaS for capacity unused
+- Multi-vector / late-interaction (ColBERT v2) — mostly displaced by single-vector + hybrid + reranker
+- LLM-tagging every doc upfront — use embedding-classifier, LLM-fallback only on ambiguous (~$30 vs $300+)
+
+## what production agents actually use
+
+See `agents.json` for the full table. Patterns:
+- No consensus on storage backend — choose by deployment shape
+- Almost no one ships their own embeddings — all defer to OpenAI/Ollama
+- Memory tier splits (short-term vs long-term) are real and worth copying
+- Filesystem-based memory (Anthropic, Claude Code) is having a moment for
+  auditability and portability — validates the "corpus as source of truth"
+  approach
+
+## frontier papers (must-read)
+
+- arXiv:2409.04701 — Late Chunking
+- arXiv:2412.15605 — Cache-Augmented Generation (CAG)
+- arXiv:2501.09136 — Agentic RAG survey
+- arXiv:2307.03172 — Lost in the Middle
+- arXiv:2404.06654 — RULER long-context benchmark
+
+Full annotated list in `papers.json`.

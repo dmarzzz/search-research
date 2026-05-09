@@ -1,0 +1,50 @@
+{
+  "_comment": "corpus-size keyed stack recommendations. The page's interactive stack picker reads from this. Other agents can fetch it directly to answer 'what should I use at scale X?'",
+  "default": "30k",
+  "stacks": {
+    "1k": {
+      "label": "~1k docs (~1.5M tokens)",
+      "cards": [
+        { "label": "01 / ingest", "pick": "just read all of it", "reason": "fits comfortably in context" },
+        { "label": "02 / embed",  "pick": "— skip",            "reason": "no need at this scale" },
+        { "label": "03 / store",  "pick": "json or txt",        "reason": "no DB needed" },
+        { "label": "04 / search", "pick": "long-context LLM",   "reason": "paste the corpus" },
+        { "label": "05 / tag",    "pick": "LLM tag-all",        "reason": "~$2-5 total" }
+      ],
+      "summary": "At this scale just <b>paste the whole corpus into Claude</b> and ask. Anything more is overengineering."
+    },
+    "30k": {
+      "label": "~30k docs (~50M tokens)  ← your situation",
+      "cards": [
+        { "label": "01 / ingest", "pick": "slackdump · vtt · md", "reason": "per-source parsers" },
+        { "label": "02 / embed",  "pick": "nomic-embed-v1.5",     "reason": "local, free, 8k ctx" },
+        { "label": "03 / store",  "pick": "LanceDB",              "reason": "single-file, hybrid" },
+        { "label": "04 / search", "pick": "+ Jina rerank v3",     "reason": "<200ms total" },
+        { "label": "05 / tag",    "pick": "BERTopic + LLM",       "reason": "phase plan above" }
+      ],
+      "summary": "<b>Real retrieval, but local.</b> Self-hosted embeddings + LanceDB + reranker. Total ongoing cost ~$0. One-time effort: ~1 weekend."
+    },
+    "1M": {
+      "label": "~1M docs (~1.5B tokens)",
+      "cards": [
+        { "label": "01 / ingest", "pick": "streaming pipeline",   "reason": "kafka or queue-based" },
+        { "label": "02 / embed",  "pick": "NV-Embed-v2 on GPU",   "reason": "better recall worth GPU cost" },
+        { "label": "03 / store",  "pick": "Qdrant or LanceDB",    "reason": "still fits single-node" },
+        { "label": "04 / search", "pick": "hybrid + reranker",    "reason": "reranker matters more" },
+        { "label": "05 / tag",    "pick": "fine-tuned classifier","reason": "invest in supervised head" }
+      ],
+      "summary": "You can still self-host but <b>GPU starts paying off</b>. Migration path stays the same — LanceDB scales here. Above this, things get distributed."
+    },
+    "100M": {
+      "label": "~100M docs (~150B tokens)",
+      "cards": [
+        { "label": "01 / ingest", "pick": "spark/dataflow",        "reason": "distributed batch" },
+        { "label": "02 / embed",  "pick": "API or GPU cluster",    "reason": "one-time embed cost dominates" },
+        { "label": "03 / store",  "pick": "Qdrant cluster · Vespa","reason": "distributed shard" },
+        { "label": "04 / search", "pick": "tiered: ANN→exact→rerank","reason": "latency budget tight" },
+        { "label": "05 / tag",    "pick": "pretrained + fine-tune","reason": "amortize over corpus" }
+      ],
+      "summary": "Distributed everything. <b>Hire infra people.</b> The patterns above don't scale here without serious tooling."
+    }
+  }
+}

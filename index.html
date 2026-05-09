@@ -1,0 +1,983 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>search-research — corpus search & tagging frontier (2026)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,600;1,6..72,400&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "TechArticle",
+  "headline": "Searching & tagging your corpus — 2026 frontier",
+  "description": "Research on the 2026 frontier of corpus search and tagging for a personal corpus of ~30k transcripts, internal memos, and Slack messages. Local-first bias, papers and code, no marketing.",
+  "keywords": ["semantic search", "embeddings", "RAG", "long-context", "agentic retrieval", "vector database", "LanceDB", "BERTopic", "MCP", "personal AI", "corpus search"],
+  "datePublished": "2026-05-09",
+  "author": { "@type": "Organization", "name": "Galaxy/Grove search experiments" },
+  "isAccessibleForFree": true,
+  "mainEntity": {
+    "@type": "ItemList",
+    "itemListElement": [
+      { "@type": "Dataset", "name": "Production agent stacks", "encodingFormat": "application/json", "url": "agents.json" },
+      { "@type": "Dataset", "name": "Frontier paper bibliography", "encodingFormat": "application/json", "url": "papers.json" },
+      { "@type": "Dataset", "name": "Stack recommendations by corpus size", "encodingFormat": "application/json", "url": "stacks.json" },
+      { "@type": "TextDigitalDocument", "name": "LLM-friendly summary", "encodingFormat": "text/plain", "url": "llms.txt" }
+    ]
+  }
+}
+</script>
+<style>
+  :root {
+    --bg: #f4efe4;
+    --bg-2: #ece6d8;
+    --bg-3: #e2dac7;
+    --ink: #221f1a;
+    --ink-soft: #4a443a;
+    --ink-mute: #7a715f;
+    --rule: #b8ad95;
+    --accent: #7d2b0f;
+    --cool: #2d4a5b;
+    --warm: #c0884a;
+    --good: #4a6b3a;
+    --hl: #d4a93b;
+    --code-bg: #1c1a16;
+    --code-ink: #e9e0c9;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: var(--bg); color: var(--ink); }
+  body { font-family: 'Newsreader', Georgia, serif; font-size: 18px; line-height: 1.55; }
+  main { max-width: 1100px; margin: 0 auto; padding: 64px 40px 120px; }
+
+  header { border-bottom: 1px solid var(--rule); padding-bottom: 28px; margin-bottom: 36px; }
+  h1 { font-size: 48px; font-weight: 600; margin: 0 0 10px; letter-spacing: -0.02em; line-height: 1.05; }
+  .lede { color: var(--ink-soft); margin: 0; font-size: 19px; }
+  .meta { display: flex; gap: 18px; margin-top: 16px; font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--ink-soft); flex-wrap: wrap; }
+  .meta span b { color: var(--ink); font-weight: 500; }
+
+  .situation {
+    background: var(--ink); color: var(--bg);
+    padding: 22px 28px; border-radius: 4px; margin: 24px 0 0;
+    font-size: 17px; line-height: 1.55;
+  }
+  .situation .label { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 0.18em; color: var(--hl); display: block; margin-bottom: 8px; }
+  .situation b { color: var(--hl); font-weight: 600; }
+
+  h2 { font-size: 30px; font-weight: 600; margin: 60px 0 14px; padding-top: 32px; border-top: 1px solid var(--rule); letter-spacing: -0.005em; line-height: 1.15; }
+  h2 .num { font-family: 'JetBrains Mono', monospace; font-size: 14px; color: var(--accent); margin-right: 14px; vertical-align: 6px; }
+  h3 { font-size: 17px; font-weight: 600; margin: 28px 0 10px; color: var(--ink-soft); text-transform: uppercase; letter-spacing: 0.1em; }
+  p { margin: 12px 0; }
+  .big { font-size: 21px; line-height: 1.55; }
+  code, .mono { font-family: 'JetBrains Mono', monospace; font-size: 14px; }
+  p code, li code { background: var(--bg-2); padding: 1px 6px; border-radius: 3px; font-size: 0.85em; }
+  pre { background: var(--code-bg); color: var(--code-ink); padding: 18px 20px; overflow-x: auto; border-radius: 4px; font-size: 13px; line-height: 1.55; }
+  pre .kw { color: #d8a657; }
+  pre .str { color: #a9b665; }
+  pre .com { color: #7c6f64; font-style: italic; }
+  pre .fn { color: #7daea3; }
+  a { color: var(--accent); }
+
+  /* === STACK PICKER === */
+  .picker-box {
+    background: var(--bg-2);
+    border: 1px solid var(--rule);
+    border-radius: 6px;
+    padding: 24px;
+    margin: 24px 0;
+  }
+  .picker-row {
+    display: flex; gap: 8px; margin-bottom: 18px; flex-wrap: wrap;
+  }
+  .picker-row button {
+    font-family: 'JetBrains Mono', monospace; font-size: 12px;
+    padding: 9px 16px; background: var(--bg); color: var(--ink);
+    border: 1px solid var(--rule); border-radius: 3px; cursor: pointer;
+    transition: all 0.2s;
+  }
+  .picker-row button.active {
+    background: var(--ink); color: var(--bg); border-color: var(--ink);
+  }
+  .picker-row button:hover:not(.active) { background: var(--bg-3); }
+
+  .stack-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 14px;
+  }
+  .stack-card {
+    background: var(--bg);
+    border: 1px solid var(--rule);
+    border-radius: 4px;
+    padding: 14px 12px;
+    position: relative;
+    transition: all 0.3s;
+  }
+  .stack-card .label {
+    font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 0.1em;
+    color: var(--accent); text-transform: uppercase;
+  }
+  .stack-card .pick {
+    font-weight: 600; font-size: 15px; margin: 4px 0; color: var(--ink);
+    transition: opacity 0.2s, transform 0.2s;
+  }
+  .stack-card .pick.changing { opacity: 0; transform: translateY(-4px); }
+  .stack-card .reason {
+    font-family: 'JetBrains Mono', monospace; font-size: 11px;
+    color: var(--ink-soft); line-height: 1.4;
+  }
+  .stack-card:not(:last-child)::after {
+    content: '→'; position: absolute; right: -10px; top: 50%;
+    transform: translateY(-50%); color: var(--rule); font-size: 16px;
+    z-index: 1; background: var(--bg-2); padding: 0 1px;
+  }
+  .stack-summary {
+    margin-top: 18px; padding: 14px 16px;
+    background: var(--bg-3); border-left: 3px solid var(--accent);
+    border-radius: 0 3px 3px 0; font-size: 15px;
+  }
+  .stack-summary b { color: var(--accent); }
+
+  /* === LEADERBOARD TABLES === */
+  .lb-wrap { margin: 18px 0; overflow-x: auto; }
+  table.lb {
+    width: 100%; border-collapse: collapse;
+    font-family: 'JetBrains Mono', monospace; font-size: 12px;
+  }
+  table.lb th, table.lb td {
+    padding: 9px 10px; text-align: left;
+    border-bottom: 1px solid var(--rule);
+  }
+  table.lb th {
+    font-weight: 600; color: var(--ink-soft); font-size: 11px;
+    text-transform: uppercase; letter-spacing: 0.05em;
+    background: var(--bg-2);
+    position: sticky; top: 0;
+  }
+  table.lb td { vertical-align: top; }
+  table.lb td.num { text-align: right; font-variant-numeric: tabular-nums; }
+  table.lb tr:hover td { background: var(--bg-2); }
+  table.lb td .name { font-weight: 600; color: var(--ink); }
+  table.lb td .lic { color: var(--good); }
+  table.lb td .lic.proprietary { color: var(--accent); }
+  table.lb .pick-row td { background: rgba(212, 169, 59, 0.12); }
+  table.lb .pick-row td .name::before {
+    content: '★ '; color: var(--hl); font-weight: 700;
+  }
+  table.lb .score-bar {
+    display: inline-block; height: 6px; background: var(--bg-3); border-radius: 3px;
+    width: 60px; vertical-align: middle; margin-left: 6px; position: relative; overflow: hidden;
+  }
+  table.lb .score-bar-fill {
+    position: absolute; left: 0; top: 0; bottom: 0;
+    background: linear-gradient(90deg, var(--cool), var(--hl), var(--accent));
+  }
+
+  /* === RAG SLIDER === */
+  .rag-vis {
+    background: var(--bg-2); border: 1px solid var(--rule);
+    border-radius: 6px; padding: 24px; margin: 18px 0;
+  }
+  .rag-vis .axis {
+    position: relative; height: 80px; margin: 28px 8px 12px;
+  }
+  .rag-vis .axis-line {
+    position: absolute; left: 0; right: 0; top: 50%;
+    height: 2px; background: var(--rule); border-radius: 1px;
+  }
+  .rag-vis .tick {
+    position: absolute; top: calc(50% - 8px); width: 2px; height: 18px;
+    background: var(--ink-soft);
+  }
+  .rag-vis .tick-label {
+    position: absolute; top: 32px; transform: translateX(-50%);
+    font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--ink-soft);
+    white-space: nowrap;
+  }
+  .rag-vis .zone {
+    position: absolute; top: 4px; bottom: 4px;
+    border-radius: 3px; opacity: 0.4;
+  }
+  .rag-vis .zone-label {
+    position: absolute; bottom: 56px;
+    font-family: 'JetBrains Mono', monospace; font-size: 11px;
+    transform: translateX(-50%);
+    text-transform: uppercase; letter-spacing: 0.1em;
+    font-weight: 600;
+  }
+  .rag-vis .marker {
+    position: absolute; top: calc(50% - 12px);
+    width: 24px; height: 24px; background: var(--ink); color: var(--bg);
+    border-radius: 50%; display: flex; align-items: center; justify-content: center;
+    font-family: 'JetBrains Mono', monospace; font-size: 11px;
+    transform: translateX(-50%);
+    transition: left 0.6s ease;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    z-index: 5;
+  }
+  .rag-vis .marker::after {
+    content: 'you'; position: absolute; top: -22px; left: 50%; transform: translateX(-50%);
+    font-size: 10px; color: var(--accent); font-weight: 700;
+  }
+  .rag-vis .verdict {
+    margin-top: 14px; padding: 14px 16px;
+    background: var(--bg); border-left: 3px solid var(--accent);
+    border-radius: 0 3px 3px 0; font-size: 15px;
+  }
+
+  /* === PIPELINE === */
+  .pipeline { display: grid; grid-template-columns: repeat(5, 1fr); gap: 14px; margin: 20px 0 8px; align-items: stretch; }
+  .stage { background: var(--bg-2); border: 1px solid var(--rule); border-radius: 4px; padding: 14px 12px; position: relative; transition: transform 0.3s, box-shadow 0.3s, background 0.3s; }
+  .stage.active { background: var(--bg); border-color: var(--accent); box-shadow: 0 4px 12px rgba(125, 43, 15, 0.15); transform: translateY(-2px); }
+  .stage .label { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--accent); letter-spacing: 0.1em; text-transform: uppercase; }
+  .stage .name { font-weight: 600; font-size: 16px; margin-top: 4px; }
+  .stage .detail { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--ink-soft); margin-top: 8px; line-height: 1.4; }
+  .stage:not(:last-child)::after { content: '→'; position: absolute; right: -12px; top: 50%; transform: translateY(-50%); color: var(--rule); font-size: 18px; z-index: 1; background: var(--bg); padding: 0 1px; transition: color 0.3s; }
+  .stage.active:not(:last-child)::after { color: var(--accent); }
+
+  /* === PHASE PLAN === */
+  .phases { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin: 20px 0; }
+  .phase {
+    background: var(--bg-2); border: 1px solid var(--rule);
+    border-radius: 4px; padding: 18px; position: relative;
+  }
+  .phase .num {
+    font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--accent);
+    letter-spacing: 0.15em; text-transform: uppercase;
+  }
+  .phase .when { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--ink-soft); margin-top: 2px; }
+  .phase h4 { font-size: 17px; font-weight: 600; margin: 8px 0 8px; }
+  .phase ul { margin: 8px 0; padding-left: 18px; font-size: 14px; line-height: 1.5; }
+  .phase ul li { margin-bottom: 4px; }
+  .phase .out {
+    margin-top: 12px; padding-top: 12px; border-top: 1px dotted var(--rule);
+    font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--ink-soft);
+  }
+
+  /* === PAPERS === */
+  .papers { display: flex; flex-direction: column; gap: 10px; margin: 16px 0; }
+  .paper {
+    display: grid; grid-template-columns: 100px 1fr; gap: 14px;
+    padding: 14px 16px; background: var(--bg-2);
+    border-left: 3px solid var(--accent); border-radius: 0 3px 3px 0;
+  }
+  .paper .id {
+    font-family: 'JetBrains Mono', monospace; font-size: 12px;
+    color: var(--accent); font-weight: 600;
+  }
+  .paper .id .year { display: block; font-size: 10px; color: var(--ink-soft); font-weight: 400; margin-top: 2px; }
+  .paper .body .title { font-weight: 600; font-size: 16px; margin-bottom: 4px; }
+  .paper .body .why { font-size: 14px; color: var(--ink-soft); line-height: 1.45; }
+
+  /* === REPOS === */
+  .repos { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 16px 0; }
+  .repo {
+    padding: 12px 14px; background: var(--bg-2);
+    border: 1px solid var(--rule); border-radius: 3px;
+  }
+  .repo .head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+  .repo .name { font-family: 'JetBrains Mono', monospace; font-size: 13px; font-weight: 600; }
+  .repo .stars { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--ink-soft); }
+  .repo .desc { font-size: 14px; color: var(--ink-soft); margin-top: 4px; line-height: 1.4; }
+  .repo.recommended { border-left: 3px solid var(--accent); background: var(--bg); }
+  .repo.recommended .name::before { content: '★ '; color: var(--hl); }
+
+  /* === CALLOUTS === */
+  .callout {
+    background: var(--bg-2); border: 1px solid var(--rule);
+    padding: 14px 18px; border-radius: 4px; margin: 16px 0;
+    font-size: 16px;
+  }
+  .callout.warn { border-left: 3px solid var(--accent); background: var(--bg); }
+  .callout.note { border-left: 3px solid var(--cool); }
+  .callout .tag {
+    display: inline-block;
+    font-family: 'JetBrains Mono', monospace; font-size: 10px;
+    letter-spacing: 0.15em; text-transform: uppercase;
+    color: var(--accent); font-weight: 600; margin-right: 8px;
+  }
+  .callout.note .tag { color: var(--cool); }
+
+  /* === NUMBERS GRID === */
+  .nums { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin: 20px 0; }
+  .num-card {
+    background: var(--bg-2); border: 1px solid var(--rule);
+    border-radius: 4px; padding: 16px 18px;
+  }
+  .num-card .v {
+    font-family: 'JetBrains Mono', monospace; font-size: 28px; font-weight: 700;
+    color: var(--accent); line-height: 1.0;
+  }
+  .num-card .k {
+    font-family: 'JetBrains Mono', monospace; font-size: 11px;
+    color: var(--ink-soft); text-transform: uppercase; letter-spacing: 0.05em;
+    margin-top: 6px;
+  }
+  .num-card .x {
+    font-size: 14px; color: var(--ink-soft); margin-top: 8px;
+  }
+
+  /* === FILE TREE & CONTRACTS === */
+  .file-tree {
+    background: var(--bg-2);
+    border: 1px solid var(--rule);
+    border-radius: 4px;
+    margin: 12px 0;
+  }
+  .file-tree pre { background: transparent; color: var(--ink); padding: 16px 20px; font-size: 13px; margin: 0; border-radius: 0; }
+  .file-tree .dir { color: var(--accent); font-weight: 600; }
+  .file-tree .cmt { color: var(--ink-mute); font-style: italic; }
+
+  .contracts { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 14px 0; }
+  .contract {
+    background: var(--bg-2);
+    border-left: 3px solid var(--accent);
+    border-radius: 0 3px 3px 0;
+    padding: 12px 16px;
+  }
+  .contract .title {
+    font-family: 'JetBrains Mono', monospace; font-size: 12px;
+    font-weight: 600; color: var(--accent);
+    text-transform: uppercase; letter-spacing: 0.05em;
+    margin-bottom: 4px;
+  }
+  .contract .how { font-size: 14px; color: var(--ink-soft); line-height: 1.45; }
+  .contract .how code { font-size: 12px; }
+
+  /* === AGENT TABLE === */
+  table.lb tr.agent-row td {
+    border-bottom: none;
+    padding-bottom: 4px;
+  }
+  table.lb tr.agent-detail td {
+    background: var(--bg-3);
+    color: var(--ink-soft);
+    font-family: 'Newsreader', Georgia, serif;
+    font-size: 14px;
+    line-height: 1.4;
+    padding: 4px 14px 12px;
+    border-bottom: 1px solid var(--rule);
+    font-style: italic;
+  }
+  table.lb td .by {
+    display: block;
+    font-size: 10px;
+    color: var(--ink-mute);
+    font-weight: 400;
+    margin-top: 2px;
+    font-style: italic;
+  }
+
+  /* === PATTERNS === */
+  .patterns { display: flex; flex-direction: column; gap: 8px; margin: 16px 0; }
+  .pattern {
+    background: var(--bg-2);
+    border: 1px solid var(--rule);
+    border-left: 3px solid var(--cool);
+    border-radius: 0 4px 4px 0;
+    padding: 14px 18px;
+  }
+  .pattern .title { font-weight: 600; font-size: 16px; margin-bottom: 4px; }
+  .pattern .detail { color: var(--ink-soft); font-size: 14px; line-height: 1.45; }
+
+  footer { margin-top: 64px; padding-top: 24px; border-top: 1px solid var(--rule); font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--ink-soft); display: flex; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
+
+  @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; } }
+  @media (max-width: 880px) {
+    main { padding: 32px 20px 80px; }
+    h1 { font-size: 32px; }
+    .stack-grid, .pipeline { grid-template-columns: 1fr; }
+    .stage:not(:last-child)::after, .stack-card:not(:last-child)::after {
+      content: '↓'; right: 50%; top: auto; bottom: -16px; transform: translateX(50%);
+    }
+    .phases, .repos, .nums { grid-template-columns: 1fr; }
+    .paper { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>Searching &amp; tagging your corpus — 2026 frontier</h1>
+    <p class="lede">What's actually winning in text retrieval right now, what's been quietly displaced, and what to build for a corpus of <i>tens of thousands</i>. Local-first bias, papers and code, no marketing.</p>
+    <div class="meta">
+      <span>scope: <b>~30k docs</b></span>
+      <span>types: <b>transcripts · memos · slack</b></span>
+      <span>budget: <b>local-first</b></span>
+      <span>compiled: <b id="ts">—</b></span>
+    </div>
+
+    <div class="situation">
+      <span class="label">your situation</span>
+      Tens of thousands of transcripts, internal memos, and slack messages.
+      You want fast <b>search</b>, <b>find-similar</b>, and a <b>multi-tier tag system</b>
+      without paying an LLM to read every doc. You've heard <i>RAG is overkill</i> —
+      that's almost right, but the truth is more interesting: RAG didn't die,
+      it just stopped being a pipeline and started being a tool inside an agent.
+    </div>
+  </header>
+
+  <h2><span class="num">01</span>The 2026 starter stack — by corpus size</h2>
+  <p>Most "what should I use?" advice ignores the dominant variable: how big is your corpus? At 1k docs you can stuff everything into a single LLM call. At 100M docs you need real distributed infrastructure. In between, the recommendation changes step by step.</p>
+
+  <div class="picker-box">
+    <div class="picker-row" id="size-picker"></div>
+    <div class="stack-grid" id="stack-grid"></div>
+    <div class="stack-summary" id="stack-summary"></div>
+  </div>
+
+  <h2><span class="num">02</span>Is RAG overkill?</h2>
+  <p class="big">Short answer: <b>not for your scale</b>. The 2023 RAG stack — chunk → embed → vector DB → top-k → rerank → stuff into LLM → synthesize — got reputation-killed because people used it for problems where simpler approaches worked. But for ~50M tokens of corpus, "just use long context" isn't an option.</p>
+
+  <div class="rag-vis">
+    <h3>where do you sit?</h3>
+    <p style="margin: 0 0 14px; font-size: 15px; color: var(--ink-soft);">total tokens in corpus determines the right approach. zones are approximate but consensus.</p>
+    <div class="axis">
+      <div class="zone-label" style="left: 12%; color: var(--good);">long context</div>
+      <div class="zone-label" style="left: 38%; color: var(--cool);">CAG (preload)</div>
+      <div class="zone-label" style="left: 70%; color: var(--accent);">retrieval (RAG)</div>
+      <div class="zone" style="left: 0%; right: 75%; background: var(--good);"></div>
+      <div class="zone" style="left: 25%; right: 50%; background: var(--cool);"></div>
+      <div class="zone" style="left: 50%; right: 0%; background: var(--accent);"></div>
+      <div class="axis-line"></div>
+      <div class="tick" style="left: 0%;"></div>
+      <div class="tick-label" style="left: 0%;">10k tok</div>
+      <div class="tick" style="left: 25%;"></div>
+      <div class="tick-label" style="left: 25%;">200k</div>
+      <div class="tick" style="left: 50%;"></div>
+      <div class="tick-label" style="left: 50%;">1M</div>
+      <div class="tick" style="left: 75%;"></div>
+      <div class="tick-label" style="left: 75%;">50M</div>
+      <div class="tick" style="left: 100%;"></div>
+      <div class="tick-label" style="left: 100%;">10B</div>
+      <div class="marker" id="rag-marker" style="left: 75%;">●</div>
+    </div>
+    <div class="verdict">
+      Your corpus is <b>~50M tokens</b> (30k docs × ~1.5k tokens avg). That's <b>50× past</b> what current 1M-context models handle reliably (RULER benchmarks show frontier models drop 30-50% accuracy past ~200k tokens), and 50× past what <a href="https://arxiv.org/abs/2412.15605" target="_blank">CAG</a> can preload. You need real retrieval. The <i>shape</i> of that retrieval has changed though — see section 03.
+    </div>
+  </div>
+
+  <div class="callout note">
+    <span class="tag">nuance</span>
+    Long context still helps <i>after</i> retrieval. Standard 2026 pattern: retrieve top-50 chunks from your 30k corpus, hand them all to a 1M-context model, ask the question. That's hybrid — neither pure RAG nor pure long-context. Best of both.
+  </div>
+
+  <h2><span class="num">03</span>What replaced "the 2023 RAG stack"</h2>
+
+  <h3>then (2023)</h3>
+  <p>chunk every doc into 512-token windows → embed with ada-002 → push to Pinecone → at query time: embed the query, top-k retrieve, rerank with Cohere, stuff into a GPT-4 prompt with a system message saying "answer based only on the context."</p>
+
+  <h3>now (2026)</h3>
+  <ol>
+    <li><b>Late chunking</b> (<a href="https://arxiv.org/abs/2409.04701" target="_blank">arXiv:2409.04701</a>) — embed the full doc through the transformer, then chunk <i>after</i> the token-level vectors are computed. Cross-chunk context is preserved. Now built into Jina v3.</li>
+    <li><b>Long-context embedders</b> — Cohere embed-v4 hits <i>128k token</i> context; Voyage-3-large does 32k. Most full memos no longer need chunking.</li>
+    <li><b>Hybrid by default</b> — BM25 + dense fusion (reciprocal rank or RRF) is now table-stakes. Pure dense loses to hybrid on entity/acronym/exact-phrase queries.</li>
+    <li><b>Agentic retrieval</b> (<a href="https://arxiv.org/abs/2501.09136" target="_blank">arXiv:2501.09136</a>) — the model decides when, how, and how often to search. 34→89% on multi-hop reasoning vs. static retrieval.</li>
+    <li><b>Agent + tool, not pipeline</b> — instead of `retrieve_then_answer()`, the LLM is given a `search()` tool and uses it iteratively. Anthropic and OpenAI both ship this pattern as default.</li>
+  </ol>
+
+  <h2><span class="num">04</span>Embedding model leaderboard</h2>
+  <p>MTEB rankings as of early 2026, plus the practical context each model is best for. ★ marks what's worth picking for your case.</p>
+  <div class="lb-wrap">
+    <table class="lb">
+      <thead>
+        <tr>
+          <th>Model</th>
+          <th class="num">MTEB</th>
+          <th class="num">Dim</th>
+          <th class="num">Ctx</th>
+          <th>License</th>
+          <th>Best at</th>
+        </tr>
+      </thead>
+      <tbody id="emb-tbody"></tbody>
+    </table>
+  </div>
+
+  <h2><span class="num">05</span>Reranker leaderboard</h2>
+  <p>Reranking on top of an embedding retrieval is now considered cheap insurance — even at 30k docs, a 200ms reranker bumps top-1 quality 15-20%. ★ marks the local-first pick.</p>
+  <div class="lb-wrap">
+    <table class="lb">
+      <thead>
+        <tr>
+          <th>Reranker</th>
+          <th class="num">ELO / Hit@1</th>
+          <th class="num">Latency</th>
+          <th class="num">Ctx</th>
+          <th>License</th>
+          <th>Notes</th>
+        </tr>
+      </thead>
+      <tbody id="rr-tbody"></tbody>
+    </table>
+  </div>
+
+  <h2><span class="num">06</span>Vector store comparison</h2>
+  <p>At the 30k-doc scale, all of these are fast enough. The differentiation is in storage format, hybrid search, and how pleasant the SDK is.</p>
+  <div class="lb-wrap">
+    <table class="lb">
+      <thead>
+        <tr>
+          <th>Store</th>
+          <th>Format</th>
+          <th>Hybrid?</th>
+          <th>Filtering</th>
+          <th>Verdict</th>
+        </tr>
+      </thead>
+      <tbody id="vs-tbody"></tbody>
+    </table>
+  </div>
+
+  <div class="callout warn">
+    <span class="tag">skip</span>
+    sqlite-vec and DuckDB-VSS — fine for &lt;10k, but at 30k both have query-time issues you'll feel. Pinecone, Weaviate, Qdrant Cloud — overkill at this scale, you're paying SaaS for capacity you don't need.
+  </div>
+
+  <h2><span class="num">07</span>Multi-tier tagging — the 3-phase plan</h2>
+  <p>The current frontier consensus: <b>don't try to LLM-tag every doc</b>. Embed once, then layer cheap-to-expensive methods. Each phase increases cost and recall by ~10x.</p>
+
+  <div class="phases">
+    <div class="phase">
+      <div class="num">phase 1</div>
+      <div class="when">week 1 · ~50 labeled docs</div>
+      <h4>Cluster &amp; spot-check</h4>
+      <ul>
+        <li><a href="https://bertopic.com/" target="_blank">BERTopic</a> on all embeddings → 20–50 clusters</li>
+        <li>Read 3 docs per cluster, write a tag for the whole cluster</li>
+        <li>Surface outlier clusters first — the data shows you the taxonomy</li>
+      </ul>
+      <div class="out">→ rough taxonomy emerges from data, no labels needed</div>
+    </div>
+    <div class="phase">
+      <div class="num">phase 2</div>
+      <div class="when">weeks 2-3 · ~500 labeled docs</div>
+      <h4>k-NN + active learning</h4>
+      <ul>
+        <li><a href="https://arxiv.org/pdf/1703.05175" target="_blank">Prototype networks</a> — class as embedding centroid</li>
+        <li><a href="https://github.com/modAL-python/modAL" target="_blank">modAL</a> uncertainty + diversity sampling</li>
+        <li><a href="https://github.com/cleanlab/cleanlab" target="_blank">Cleanlab v2.6</a> audit catches 10-30% mislabels</li>
+      </ul>
+      <div class="out">→ self-tagging working at ~85% accuracy</div>
+    </div>
+    <div class="phase">
+      <div class="num">phase 3</div>
+      <div class="when">week 4+ · ~3k labeled docs</div>
+      <h4>LLM fallback &amp; hierarchy</h4>
+      <ul>
+        <li>Hierarchical contrastive loss for the 3-tier tag tree</li>
+        <li>Haiku-as-fallback for ambiguous (~$30 total for 30k)</li>
+        <li>Cleanlab Datalab quarterly audit for label drift</li>
+      </ul>
+      <div class="out">→ multi-tier tagging at ~95%, ongoing cost ~zero</div>
+    </div>
+  </div>
+
+  <div class="callout">
+    <span class="tag">cost intuition</span>
+    Tagging 30k docs by handing every doc to an LLM: ~$300-$1500 (GPT-4 / Opus pricing) or ~$30 (Haiku). Cluster-then-propagate: ~$0 in API costs, just your time on the cluster labels. Hybrid (embedding-first, LLM-fallback): ~$30 with much higher quality than pure embedding.
+  </div>
+
+  <h2><span class="num">08</span>The simple, durable stack</h2>
+  <p class="big">For maintenance and longevity, the answer narrows hard. Three things matter: <b>files as source of truth</b>, <b>index as regeneratable</b>, <b>tags inside the documents</b>. Everything else flows from those.</p>
+
+  <h3>file layout</h3>
+  <div class="file-tree">
+<pre><span class="dir">corpus/</span>                     <span class="cmt"># source of truth — markdown/txt, version with git</span>
+  memo-q4-2024.md           <span class="cmt"># yaml frontmatter for tags: [strategy, q4]</span>
+  slack-eng-2024-12-04.md   <span class="cmt"># one file per slack day or thread</span>
+  transcript-board.md       <span class="cmt"># one file per transcript</span>
+
+<span class="dir">index.lance/</span>                <span class="cmt"># LanceDB single-file store — REGENERATABLE</span>
+config.yaml                 <span class="cmt"># embedding model + chunking choices</span>
+search.py                   <span class="cmt"># ~150 lines — index() / search() / tag()</span></pre>
+  </div>
+
+  <h3>the pluggability contract</h3>
+  <p>One property holds everything together: <b>the index is regeneratable from the corpus</b>. You can blow away <code>index.lance/</code> at any time and rebuild from <code>corpus/</code>. That single property is what makes every layer swappable:</p>
+  <div class="contracts">
+    <div class="contract">
+      <div class="title">swap embedding model</div>
+      <div class="how">change <code>config.yaml</code>, run <code>reindex</code>. Embeddings are durable data; the function that produced them is not.</div>
+    </div>
+    <div class="contract">
+      <div class="title">swap vector store</div>
+      <div class="how">read <code>index.lance/</code> with DuckDB, write to Qdrant/Postgres/wherever. Lance format is open Arrow.</div>
+    </div>
+    <div class="contract">
+      <div class="title">swap search frontend</div>
+      <div class="how">CLI today, MCP server tomorrow, FastAPI + web app the day after. All wrap the same <code>search.py</code> module.</div>
+    </div>
+    <div class="contract">
+      <div class="title">portable tags</div>
+      <div class="how">yaml frontmatter inside each <code>.md</code> file. No tag DB. Edit in any text editor, version with git, query with <code>rg</code>.</div>
+    </div>
+    <div class="contract">
+      <div class="title">durable embeddings</div>
+      <div class="how">computed once, reused for years. Re-embedding is a 1-time hour-long batch when you upgrade the model.</div>
+    </div>
+    <div class="contract">
+      <div class="title">layered tagging</div>
+      <div class="how">v1: cluster &amp; label. v2: add k-NN classifier. v3: LLM fallback. Each layer is optional and additive.</div>
+    </div>
+  </div>
+
+  <h3>dependencies (4 of them)</h3>
+  <ul>
+    <li><code>lancedb</code> — vector store</li>
+    <li><code>ollama</code> Python client — local embedding service</li>
+    <li><code>pyyaml</code> — config + frontmatter</li>
+    <li><code>click</code> — CLI shell</li>
+  </ul>
+  <p>All Apache 2.0 / MIT, all post-1.0, all maintained by orgs that aren't going anywhere. Add <code>bertopic</code>, <code>cleanlab</code>, <code>modAL-python</code> when you reach the tagging phases — those are bolts, not foundations.</p>
+
+  <h3>operational view</h3>
+  <p>Five stages from raw input to searchable index. Each is independent — you can rerun any one without touching the others.</p>
+
+  <div class="pipeline" id="pipeline">
+    <div class="stage" data-i="0">
+      <div class="label">01 / ingest</div>
+      <div class="name">slackdump · vtt · md</div>
+      <div class="detail">slackdump for slack<br>vtt parser for transcripts<br>walk md/txt for memos</div>
+    </div>
+    <div class="stage" data-i="1">
+      <div class="label">02 / embed</div>
+      <div class="name">nomic-embed-v1.5</div>
+      <div class="detail">via Ollama<br>768 dim, 8k context<br>local, free</div>
+    </div>
+    <div class="stage" data-i="2">
+      <div class="label">03 / store</div>
+      <div class="name">LanceDB</div>
+      <div class="detail">single-file<br>BM25 + dense hybrid<br>SQL + vector</div>
+    </div>
+    <div class="stage" data-i="3">
+      <div class="label">04 / search</div>
+      <div class="name">+ Jina rerank v3</div>
+      <div class="detail">top-50 hybrid<br>rerank to top-5<br>~200ms total</div>
+    </div>
+    <div class="stage" data-i="4">
+      <div class="label">05 / tag</div>
+      <div class="name">BERTopic + LLM</div>
+      <div class="detail">cluster · prototype<br>haiku fallback<br>cleanlab audit</div>
+    </div>
+  </div>
+
+  <h3>concrete commands to start</h3>
+<pre><span class="com"># ingest slack</span>
+brew install slackdump
+slackdump export -o corpus/slack/
+
+<span class="com"># start ollama with embedding model</span>
+ollama pull nomic-embed-text:v1.5
+
+<span class="com"># scaffold the index (python)</span>
+pip install lancedb pyarrow ollama bertopic cleanlab modAL-python
+python -c "import lancedb; db = lancedb.connect('./index.lance')"
+
+<span class="com"># the loop:</span>
+<span class="com">#   for each doc -> ollama embed -> store in lancedb table</span>
+<span class="com">#   search: hybrid query -> top-50 -> jina rerank -> top-5</span>
+<span class="com">#   tag:    bertopic on all embeddings -> human-label clusters</span>
+</pre>
+
+  <h2><span class="num">09</span>What production agents actually use</h2>
+  <p>Reference points for "is this stack reasonable?" The honest answer: <b>everyone uses something different</b>, and that's the point — the abstractions matter more than the specific backends. Pick the architecture, swap components freely. Loaded from <code><a href="agents.json">agents.json</a></code>.</p>
+
+  <div class="lb-wrap">
+    <table class="lb">
+      <thead>
+        <tr>
+          <th>Agent</th>
+          <th>Storage</th>
+          <th>Embedding</th>
+          <th>Vector store</th>
+          <th>MCP</th>
+          <th>License</th>
+        </tr>
+      </thead>
+      <tbody id="agents-tbody"></tbody>
+    </table>
+  </div>
+
+  <h3>Patterns worth stealing</h3>
+  <div class="patterns" id="patterns"></div>
+
+  <div class="callout note">
+    <span class="tag">validation</span>
+    Anthropic's own Claude Code uses <b>filesystem-as-memory</b>. No vector DB. Files you can grep, version, and diff. That's exactly the "corpus as source of truth" pattern from section 08 — proven at scale by the team that builds the agent the user is talking to right now.
+  </div>
+
+  <h2><span class="num">10</span>Frontier papers</h2>
+  <p>The papers that matter for what you're trying to do. Each one is a load-bearing reference for a section above. arXiv IDs are clickable.</p>
+
+  <h3>embedding &amp; retrieval</h3>
+  <div class="papers" id="papers-embedding"></div>
+
+  <h3>RAG vs long-context vs CAG</h3>
+  <div class="papers" id="papers-rag"></div>
+
+  <h3>tagging &amp; classification</h3>
+  <div class="papers" id="papers-tagging"></div>
+
+  <h2><span class="num">11</span>Frontier code &amp; tools</h2>
+  <p>Repos that are actually maintained and worth pulling. ★ marks what I'd pull first.</p>
+  <div class="repos" id="repos"></div>
+
+  <h2><span class="num">12</span>Things to ignore</h2>
+  <ul>
+    <li><b>"Frameworks"</b> — LlamaIndex, Haystack. Enterprise-shaped. Save more time than they cost only if you have ≥3 engineers.</li>
+    <li><b>Atlas, Pinecone, Weaviate Cloud</b> — managed vector DBs. ~$50-500/mo for capacity you won't use at this scale.</li>
+    <li><b>Multi-vector retrieval (ColBERT v2)</b> — mostly displaced by single-vector + hybrid + reranker. Storage cost ~10x. Skip unless you specifically need fine-grained scoring.</li>
+    <li><b>Pure long-context "stuff everything in"</b> — RULER and Lost-in-the-Middle results show frontier models drop 30-50% past ~200k tokens. Your corpus is 50M.</li>
+    <li><b>Re-embedding every time the model changes</b> — embeddings are durable. Pick a good one once, keep using it. Re-embedding is a 1-time hour-long batch when you upgrade.</li>
+  </ul>
+
+  <h2><span class="num">13</span>Open questions worth running experiments on</h2>
+  <ul>
+    <li>Does <b>late chunking</b> (Jina v3) actually beat naive chunking on your specific transcript style? Worth A/B-ing.</li>
+    <li>Is the <b>hybrid retrieve → top-50 → 1M-context model</b> pattern better than retrieve → top-5 → smaller model? Probably yes for hard questions, no for find-similar.</li>
+    <li>Does <b>per-tier embedding fine-tuning</b> (different small head per tag tier) outperform a single classifier? Cheap to test once Phase 2 is running.</li>
+    <li>Slack-message-as-doc vs slack-thread-as-doc — does retrieval quality depend on this granularity? Try both, measure.</li>
+  </ul>
+
+  <footer>
+    <span>~/Galaxy/Grove/search/search-research/</span>
+    <span>agent-readable: <a href="llms.txt">llms.txt</a> · <a href="agents.json">agents.json</a> · <a href="papers.json">papers.json</a> · <a href="stacks.json">stacks.json</a></span>
+  </footer>
+</main>
+
+<script>
+// === stack picker (data from stacks.json) ===
+async function setupPicker() {
+  const picker = document.getElementById('size-picker');
+  const grid = document.getElementById('stack-grid');
+  const summary = document.getElementById('stack-summary');
+
+  let data;
+  try {
+    const r = await fetch('stacks.json');
+    data = await r.json();
+  } catch (e) {
+    summary.innerHTML = `<b>error:</b> failed to load stacks.json — ${e.message}`;
+    return;
+  }
+  const sizes = Object.keys(data.stacks);
+  const defaultSize = data.default;
+
+  function render(size, animate) {
+    const s = data.stacks[size];
+    if (animate) {
+      grid.querySelectorAll('.pick').forEach(el => el.classList.add('changing'));
+      setTimeout(() => apply(s), 180);
+    } else {
+      apply(s);
+    }
+  }
+  function apply(s) {
+    grid.innerHTML = s.cards.map(c => `
+      <div class="stack-card">
+        <div class="label">${c.label}</div>
+        <div class="pick">${c.pick}</div>
+        <div class="reason">${c.reason}</div>
+      </div>`).join('');
+    summary.innerHTML = s.summary;
+  }
+  sizes.forEach(s => {
+    const btn = document.createElement('button');
+    btn.textContent = s + ' docs';
+    if (s === defaultSize) btn.classList.add('active');
+    btn.addEventListener('click', () => {
+      picker.querySelectorAll('button').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      render(s, true);
+    });
+    picker.appendChild(btn);
+  });
+  render(defaultSize, false);
+}
+
+// === embedding leaderboard ===
+const EMB = [
+  { name: 'NV-Embed-v2',           mteb: 72.31, dim: 4096, ctx: '8k',   lic: 'Apache 2.0',     pick: false, best: 'highest MTEB; needs GPU; one-time setup' },
+  { name: 'Qwen3-Embedding-8B',     mteb: 70.58, dim: 4096, ctx: '8k',   lic: 'Apache 2.0',     pick: false, best: 'multilingual peer of NV; same self-host story' },
+  { name: 'Linq-Embed-Mistral',    mteb: 68.20, dim: 4096, ctx: '8k',   lic: 'Open',           pick: false, best: 'pure retrieval king (60.2 retrieval-MTEB)' },
+  { name: 'Gemini Embedding-001',  mteb: 68.32, dim: 768,  ctx: '2k',   lic: 'API-only',       pick: false, best: 'fast API, but 2k context is limiting' },
+  { name: 'GritLM-7B',             mteb: 66.80, dim: 4096, ctx: '8k',   lic: 'Open',           pick: false, best: 'unified gen + embed; experimental' },
+  { name: 'Cohere embed-v4',       mteb: 65.20, dim: 1024, ctx: '128k', lic: 'API-only',       pick: false, best: 'massive context — no chunking needed' },
+  { name: 'OpenAI text-embed-3-large', mteb: 64.60, dim: 3072, ctx: '8k', lic: 'API-only',     pick: false, best: 'easy default, but pricier per quality' },
+  { name: 'Voyage-3-large',        mteb: 64.00, dim: 1024, ctx: '32k',  lic: 'API-only',       pick: false, best: 'balanced speed/cost API; long context' },
+  { name: 'BGE-M3',                mteb: 63.00, dim: 1024, ctx: '8k',   lic: 'Apache 2.0',     pick: false, best: '100+ languages, solid baseline' },
+  { name: 'nomic-embed-text-v1.5', mteb: 62.28, dim: 768,  ctx: '8k',   lic: 'Apache 2.0',     pick: true,  best: 'tiny, CPU-runnable, Matryoshka dims, your default' },
+  { name: 'nomic-embed-text-v2-MoE', mteb: 62.50, dim: 768, ctx: '8k',  lic: 'Apache 2.0',     pick: false, best: 'MoE, ~100 langs; speed advantage' }
+];
+function renderEmb() {
+  const tbody = document.getElementById('emb-tbody');
+  const max = Math.max(...EMB.map(e => e.mteb)), min = 60;
+  tbody.innerHTML = EMB.map(e => {
+    const pct = ((e.mteb - min) / (max - min)) * 100;
+    const lic = e.lic.includes('API') ? 'proprietary' : '';
+    return `<tr class="${e.pick ? 'pick-row' : ''}">
+      <td><span class="name">${e.name}</span></td>
+      <td class="num">${e.mteb.toFixed(2)} <span class="score-bar"><span class="score-bar-fill" style="width:${pct}%"></span></span></td>
+      <td class="num">${e.dim}</td>
+      <td class="num">${e.ctx}</td>
+      <td><span class="lic ${lic}">${e.lic}</span></td>
+      <td>${e.best}</td>
+    </tr>`;
+  }).join('');
+}
+
+// === reranker leaderboard ===
+const RR = [
+  { name: 'Cohere Rerank v4 Pro',  q: '1629 ELO',     lat: '595ms', ctx: '100k', lic: 'API-only',     pick: false, notes: 'production-grade, 100+ langs' },
+  { name: 'Voyage Rerank 2.5',     q: 'high (~1600)', lat: '300ms', ctx: '32k',  lic: 'API-only',     pick: false, notes: 'good speed/quality balance' },
+  { name: 'Jina Reranker v3',      q: '81% Hit@1',    lat: '188ms', ctx: '8k',   lic: 'Apache 2.0',   pick: true,  notes: 'fastest local pick; function-call mode for agents' },
+  { name: 'bge-reranker-v2-gemma', q: '~80% Hit@1',   lat: '~250ms',ctx: '8k',   lic: 'Apache 2.0',   pick: false, notes: 'strong open alternative; runs on Mac' },
+  { name: 'mxbai-rerank-base-v1',  q: '~78% Hit@1',   lat: '~150ms',ctx: '512',  lic: 'Apache 2.0',   pick: false, notes: 'small, fast, limited context' }
+];
+function renderRr() {
+  document.getElementById('rr-tbody').innerHTML = RR.map(r => {
+    const lic = r.lic.includes('API') ? 'proprietary' : '';
+    return `<tr class="${r.pick ? 'pick-row' : ''}">
+      <td><span class="name">${r.name}</span></td>
+      <td class="num">${r.q}</td>
+      <td class="num">${r.lat}</td>
+      <td class="num">${r.ctx}</td>
+      <td><span class="lic ${lic}">${r.lic}</span></td>
+      <td>${r.notes}</td>
+    </tr>`;
+  }).join('');
+}
+
+// === vector store comparison ===
+const VS = [
+  { name: 'LanceDB',     fmt: 'single-file (Lance)',  hyb: 'BM25 + dense built-in', filt: 'SQL-like',   verdict: '★ pleasant SDK, hybrid built-in, scales to 10M', pick: true },
+  { name: 'Chroma',      fmt: 'embedded (DuckDB)',    hyb: 'no native BM25',        filt: 'metadata',   verdict: 'fastest MVP; missing hybrid is the catch' },
+  { name: 'Qdrant (embedded)', fmt: 'rocksdb-style',  hyb: 'BM25 via attached',     filt: 'rich filters',verdict: 'great for filtering, modest learning curve' },
+  { name: 'sqlite-vec',  fmt: 'sqlite extension',     hyb: 'add FTS5 yourself',     filt: 'SQL',        verdict: 'fine for &lt;10k; locking pain at this scale' },
+  { name: 'DuckDB-VSS',  fmt: 'duckdb extension',     hyb: 'add FTS yourself',      filt: 'full SQL',   verdict: 'over-engineered for retrieval-only use' },
+  { name: 'FAISS',       fmt: 'in-memory + flat file',hyb: 'roll your own',         filt: 'roll own',   verdict: 'raw speed, no persistence/SDK polish' },
+  { name: 'Pinecone',    fmt: 'managed cloud',        hyb: 'yes',                   filt: 'rich',       verdict: 'overkill at 30k; pay-rent SaaS' }
+];
+function renderVs() {
+  document.getElementById('vs-tbody').innerHTML = VS.map(v => `
+    <tr class="${v.pick ? 'pick-row' : ''}">
+      <td><span class="name">${v.name}</span></td>
+      <td>${v.fmt}</td>
+      <td>${v.hyb}</td>
+      <td>${v.filt}</td>
+      <td>${v.verdict}</td>
+    </tr>`).join('');
+}
+
+// === papers ===
+async function loadPapers() {
+  try {
+    const r = await fetch('papers.json');
+    const data = await r.json();
+    ['embedding', 'rag', 'tagging'].forEach(k => {
+      document.getElementById(`papers-${k}`).innerHTML = data[k].map(p => `
+        <div class="paper">
+          <div class="id">
+            <a href="https://arxiv.org/abs/${p.id}" target="_blank">${p.id}</a>
+            <span class="year">${p.year}</span>
+          </div>
+          <div class="body">
+            <div class="title">${p.title}</div>
+            <div class="why">${p.why}</div>
+          </div>
+        </div>`).join('');
+    });
+  } catch (e) {
+    console.error('failed to load papers', e);
+  }
+}
+
+// === agents ===
+async function loadAgents() {
+  try {
+    const r = await fetch('agents.json');
+    const data = await r.json();
+    const tbody = document.getElementById('agents-tbody');
+    tbody.innerHTML = data.agents.map(a => {
+      const licClass = a.license.includes('proprietary') ? 'proprietary' : '';
+      const repoLink = a.repo.startsWith('http')
+        ? a.repo
+        : `https://github.com/${a.repo}`;
+      return `
+        <tr class="agent-row">
+          <td>
+            <a class="name" href="${repoLink}" target="_blank">${a.name}</a>
+            <span class="by">by ${a.by}</span>
+          </td>
+          <td>${a.storage}</td>
+          <td>${a.embedding}</td>
+          <td>${a.vector_store}</td>
+          <td>${a.mcp}</td>
+          <td><span class="lic ${licClass}">${a.license}</span></td>
+        </tr>
+        <tr class="agent-detail"><td colspan="6">${a.interesting}</td></tr>`;
+    }).join('');
+
+    document.getElementById('patterns').innerHTML = data.patterns.map(p => `
+      <div class="pattern">
+        <div class="title">${p.title}</div>
+        <div class="detail">${p.detail}</div>
+      </div>`).join('');
+  } catch (e) {
+    console.error('failed to load agents', e);
+  }
+}
+
+// === repos ===
+const REPOS = [
+  { name: 'lancedb/lancedb', stars: '8k+', desc: 'Single-file vector DB. Hybrid search. Native Python/TS/Rust. Your storage layer.', rec: true },
+  { name: 'rusq/slackdump', stars: '4k+', desc: 'Export Slack history without admin. JSON output, dedup, MCP server bundled. Your slack ingest.', rec: true },
+  { name: 'ollama/ollama', stars: '120k+', desc: 'Local embedding & LLM runner. `ollama pull nomic-embed-text` → done.', rec: true },
+  { name: 'MaartenGr/BERTopic', stars: '7k+', desc: 'Embedding-aware topic modeling. UMAP+HDBSCAN+c-TF-IDF. Phase 1 of tagging.', rec: true },
+  { name: 'cleanlab/cleanlab', stars: '11k+', desc: 'Find mislabeled docs and weak labels. Run quarterly on your tagged corpus.', rec: true },
+  { name: 'modAL-python/modAL', stars: '2k+', desc: 'Active learning loops. Uncertainty + diversity sampling. Phase 2 of tagging.' },
+  { name: 'bclavie/RAGatouille', stars: '3k+', desc: 'Late interaction (ColBERT) + dense fusion. Use only if you specifically need fine-grained scoring.' },
+  { name: 'jina-ai/late-chunking', stars: '500+', desc: 'Reference impl of late chunking. Already in Jina v3 API.' },
+  { name: 'reorproject/reor', stars: '8k+', desc: 'AI-first note app. Uses LanceDB internally. Reasonable fork-target if you want a UI.' },
+  { name: 'khoj-ai/khoj', stars: '14k+', desc: 'Self-hostable personal AI. Ingests arbitrary docs, decent search. Web-first.' },
+  { name: 'brianpetro/obsidian-smart-connections', stars: '3k+', desc: 'Local embeddings inside Obsidian. Lowest-friction path if your corpus is already in markdown.' },
+  { name: 'facebookresearch/faiss', stars: '32k+', desc: 'Industrial-grade indexing. Skip unless you outgrow LanceDB.' }
+];
+function renderRepos() {
+  document.getElementById('repos').innerHTML = REPOS.map(r => `
+    <div class="repo ${r.rec ? 'recommended' : ''}">
+      <div class="head">
+        <a class="name" href="https://github.com/${r.name}" target="_blank">${r.name}</a>
+        <span class="stars">${r.stars}</span>
+      </div>
+      <div class="desc">${r.desc}</div>
+    </div>`).join('');
+}
+
+// === pipeline auto-cycle ===
+function setupPipelineCycle() {
+  const stages = document.querySelectorAll('.pipeline .stage');
+  let cur = 0;
+  function tick() {
+    stages.forEach((s, i) => s.classList.toggle('active', i === cur));
+    cur = (cur + 1) % stages.length;
+  }
+  tick();
+  setInterval(tick, 1500);
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  setupPicker();
+  renderEmb();
+  renderRr();
+  renderVs();
+  loadPapers();
+  loadAgents();
+  renderRepos();
+  setupPipelineCycle();
+  document.getElementById('ts').textContent = new Date().toISOString().slice(0, 10);
+});
+</script>
+</body>
+</html>
