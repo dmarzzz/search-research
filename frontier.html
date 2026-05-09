@@ -1,0 +1,494 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>frontier — measurement, HRR, dreaming, multi-agent (2026)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,600;1,6..72,400&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "TechArticle",
+  "headline": "Production frontier — measuring agent value, HRR memory math, dreaming consolidation, multi-agent reality check",
+  "description": "Part III of search-research. Four open questions at the production frontier: how prosumers measure agent value, the math beneath HRR/holographic memory, the dreaming/consolidation frontier, and the honest state of multi-agent.",
+  "keywords": ["agent evaluation", "METR study", "HRR", "Holographic Reduced Representations", "circular convolution", "memory consolidation", "dreaming", "CoALA", "multi-agent", "A2A protocol", "MCP"],
+  "datePublished": "2026-05-09",
+  "isPartOf": { "@type": "WebPage", "url": "index.html" },
+  "isAccessibleForFree": true,
+  "mainEntity": {
+    "@type": "ItemList",
+    "itemListElement": [
+      { "@type": "Dataset", "name": "Frontier paper bibliography (memory, hrr, multi_agent, evaluation)", "encodingFormat": "application/json", "url": "papers.json" },
+      { "@type": "TextDigitalDocument", "name": "LLM-friendly summary", "encodingFormat": "text/plain", "url": "llms.txt" }
+    ]
+  }
+}
+</script>
+<style>
+  :root {
+    --bg: #f4efe4;
+    --bg-2: #ece6d8;
+    --bg-3: #e2dac7;
+    --ink: #221f1a;
+    --ink-soft: #4a443a;
+    --ink-mute: #7a715f;
+    --rule: #b8ad95;
+    --accent: #7d2b0f;
+    --cool: #2d4a5b;
+    --warm: #c0884a;
+    --good: #4a6b3a;
+    --hl: #d4a93b;
+    --code-bg: #1c1a16;
+    --code-ink: #e9e0c9;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: var(--bg); color: var(--ink); }
+  body { font-family: 'Newsreader', Georgia, serif; font-size: 18px; line-height: 1.55; }
+  main { max-width: 1100px; margin: 0 auto; padding: 64px 40px 120px; }
+
+  nav.crumbs { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--ink-soft); margin-bottom: 12px; }
+  nav.crumbs a { color: var(--accent); }
+
+  header { border-bottom: 1px solid var(--rule); padding-bottom: 28px; margin-bottom: 36px; }
+  h1 { font-size: 44px; font-weight: 600; margin: 0 0 10px; letter-spacing: -0.02em; line-height: 1.05; }
+  .lede { color: var(--ink-soft); margin: 0; font-size: 19px; }
+  .meta { display: flex; gap: 18px; margin-top: 16px; font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--ink-soft); flex-wrap: wrap; }
+  .meta span b { color: var(--ink); font-weight: 500; }
+
+  .tldr { background: var(--ink); color: var(--bg); padding: 22px 28px; border-radius: 4px; margin: 24px 0 0; font-size: 18px; line-height: 1.55; }
+  .tldr .label { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 0.18em; color: var(--hl); display: block; margin-bottom: 8px; }
+  .tldr b { color: var(--hl); font-weight: 600; }
+
+  h2 { font-size: 28px; font-weight: 600; margin: 60px 0 14px; padding-top: 32px; border-top: 1px solid var(--rule); letter-spacing: -0.005em; line-height: 1.15; }
+  h2 .num { font-family: 'JetBrains Mono', monospace; font-size: 14px; color: var(--accent); margin-right: 14px; vertical-align: 6px; }
+  h3 { font-size: 17px; font-weight: 600; margin: 28px 0 10px; color: var(--ink-soft); text-transform: uppercase; letter-spacing: 0.1em; }
+  p { margin: 12px 0; }
+  .big { font-size: 21px; line-height: 1.55; }
+  code, .mono { font-family: 'JetBrains Mono', monospace; font-size: 14px; }
+  p code, li code { background: var(--bg-2); padding: 1px 6px; border-radius: 3px; font-size: 0.85em; }
+  pre { background: var(--code-bg); color: var(--code-ink); padding: 18px 20px; overflow-x: auto; border-radius: 4px; font-size: 13px; line-height: 1.55; }
+  pre .kw { color: #d8a657; }
+  pre .str { color: #a9b665; }
+  pre .com { color: #7c6f64; font-style: italic; }
+  pre .fn { color: #7daea3; }
+  a { color: var(--accent); }
+
+  /* === BIG NUMBERS === */
+  .nums { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin: 20px 0; }
+  .nums.four { grid-template-columns: repeat(4, 1fr); }
+  .num-card { background: var(--bg-2); border: 1px solid var(--rule); border-radius: 4px; padding: 16px 18px; }
+  .num-card .v { font-family: 'JetBrains Mono', monospace; font-size: 32px; font-weight: 700; color: var(--accent); line-height: 1.0; }
+  .num-card .v.cool { color: var(--cool); }
+  .num-card .v.warm { color: var(--warm); }
+  .num-card .v.good { color: var(--good); }
+  .num-card .k { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--ink-soft); text-transform: uppercase; letter-spacing: 0.05em; margin-top: 6px; }
+  .num-card .x { font-size: 14px; color: var(--ink-soft); margin-top: 8px; line-height: 1.4; }
+
+  /* === LEADERBOARD === */
+  .lb-wrap { margin: 18px 0; overflow-x: auto; }
+  table.lb { width: 100%; border-collapse: collapse; font-family: 'JetBrains Mono', monospace; font-size: 12px; }
+  table.lb th, table.lb td { padding: 9px 10px; text-align: left; border-bottom: 1px solid var(--rule); vertical-align: top; }
+  table.lb th { font-weight: 600; color: var(--ink-soft); font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; background: var(--bg-2); }
+  table.lb tr:hover td { background: var(--bg-2); }
+  table.lb td .name { font-weight: 600; color: var(--ink); }
+  table.lb td.num { text-align: right; font-variant-numeric: tabular-nums; }
+  table.lb .pick-row td { background: rgba(212, 169, 59, 0.12); }
+  table.lb .pick-row td .name::before { content: '★ '; color: var(--hl); font-weight: 700; }
+
+  /* === CALLOUTS === */
+  .callout { background: var(--bg-2); border: 1px solid var(--rule); padding: 14px 18px; border-radius: 4px; margin: 16px 0; font-size: 16px; }
+  .callout.warn { border-left: 3px solid var(--accent); background: var(--bg); }
+  .callout.note { border-left: 3px solid var(--cool); }
+  .callout.good { border-left: 3px solid var(--good); }
+  .callout .tag { display: inline-block; font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 0.15em; text-transform: uppercase; color: var(--accent); font-weight: 600; margin-right: 8px; }
+  .callout.note .tag { color: var(--cool); }
+  .callout.good .tag { color: var(--good); }
+
+  /* === HRR FORMULA BOX === */
+  .formula-box {
+    background: var(--bg-2); border: 1px solid var(--rule);
+    border-radius: 6px; padding: 22px 24px; margin: 18px 0;
+  }
+  .formula-box h4 {
+    font-family: 'JetBrains Mono', monospace; font-size: 11px;
+    text-transform: uppercase; letter-spacing: 0.12em;
+    color: var(--accent); margin: 0 0 14px;
+  }
+  .formula-box .row {
+    display: grid; grid-template-columns: 110px 1fr;
+    gap: 16px; align-items: baseline;
+    margin: 10px 0;
+    padding: 8px 0;
+    border-bottom: 1px dotted var(--rule);
+  }
+  .formula-box .row:last-child { border: none; }
+  .formula-box .lbl {
+    font-family: 'JetBrains Mono', monospace; font-size: 11px;
+    color: var(--ink-soft); text-transform: uppercase; letter-spacing: 0.05em;
+  }
+  .formula-box .formula {
+    font-family: 'JetBrains Mono', monospace; font-size: 15px;
+    line-height: 1.6;
+  }
+  .formula-box .formula .v { color: var(--cool); font-weight: 600; }
+  .formula-box .formula .op { color: var(--accent); font-weight: 700; }
+  .formula-box .formula .out { color: var(--good); font-weight: 600; }
+  .formula-box .desc { font-size: 13px; color: var(--ink-soft); margin-top: 4px; line-height: 1.4; }
+
+  /* === ALGORITHM STEPS === */
+  .algo {
+    background: var(--bg-2); border: 1px solid var(--rule);
+    border-radius: 6px; padding: 20px 24px; margin: 16px 0;
+  }
+  .algo h4 { font-family: 'JetBrains Mono', monospace; font-size: 11px; text-transform: uppercase; letter-spacing: 0.12em; color: var(--accent); margin: 0 0 12px; }
+  .algo ol { padding-left: 20px; margin: 0; }
+  .algo ol li { margin-bottom: 8px; line-height: 1.5; }
+  .algo ol li code { font-size: 12px; }
+
+  /* === PATTERN CARDS === */
+  .patterns { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin: 18px 0; }
+  .pattern-card {
+    background: var(--bg-2); border: 1px solid var(--rule);
+    border-left: 3px solid var(--cool);
+    border-radius: 0 3px 3px 0; padding: 14px 16px;
+  }
+  .pattern-card.win { border-left-color: var(--good); }
+  .pattern-card.skip { border-left-color: var(--accent); }
+  .pattern-card .name { font-weight: 600; font-size: 16px; }
+  .pattern-card .desc { font-size: 14px; color: var(--ink-soft); line-height: 1.45; margin-top: 4px; }
+  .pattern-card .verdict { margin-top: 8px; padding-top: 8px; border-top: 1px dotted var(--rule); font-family: 'JetBrains Mono', monospace; font-size: 11px; }
+  .pattern-card.win .verdict { color: var(--good); }
+  .pattern-card.skip .verdict { color: var(--accent); }
+  .pattern-card.note .verdict { color: var(--cool); }
+
+  footer { margin-top: 64px; padding-top: 24px; border-top: 1px solid var(--rule); font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--ink-soft); display: flex; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
+
+  @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; } }
+  @media (max-width: 880px) {
+    main { padding: 32px 20px 80px; }
+    h1 { font-size: 32px; }
+    .nums, .nums.four, .patterns { grid-template-columns: 1fr; }
+    .formula-box .row { grid-template-columns: 1fr; gap: 4px; }
+  }
+</style>
+</head>
+<body>
+<main>
+  <nav class="crumbs">
+    <a href="index.html">part i — search &amp; tagging</a>
+    &nbsp;&rsaquo;&nbsp;
+    <a href="harnesses.html">part ii — harnesses</a>
+    &nbsp;&rsaquo;&nbsp; part iii — production frontier
+  </nav>
+
+  <header>
+    <h1>The production frontier</h1>
+    <p class="lede">Part III. Four open questions at the edge of personal-AI in early 2026: <i>how do you actually measure value</i>, <i>what's the math under HRR memory</i>, <i>does dreaming-style consolidation work</i>, and <i>is multi-agent real or marketing</i>?</p>
+    <div class="meta">
+      <span>scope: <b>open frontier</b></span>
+      <span>focus: <b>production reality</b></span>
+      <span>compiled: <b id="ts">—</b></span>
+    </div>
+
+    <div class="tldr">
+      <span class="label">if you only read one thing</span>
+      Karpathy's "80% agent" claim is <b>vibes</b>. METR's reproducible RCT found AI made experienced devs <b>19% slower</b> while they felt 20% faster. <b>HRR is real but niche</b> — it wins on compositional queries, loses on general retrieval. <b>Dreaming works</b> (Anthropic ships it; Harvey reports 6× completion gains) but is premature optimization under ~20 sessions/week. <b>Multi-agent is mostly hype</b> — 41-86% of multi-agent systems fail; supervisor-worker dominates the rest; for one user, one smart agent + 20 tools beats 20 agents.
+    </div>
+  </header>
+
+  <h2><span class="num">01</span>How prosumers actually measure agent value</h2>
+  <p class="big">The Karpathy claim, dissected. Most "I'm 80% agent now" claims are <b>self-reported workflow vibes</b> — credible because of who said them, but not measurable. The <i>actual data</i> is more interesting and less flattering.</p>
+
+  <h3>the four numbers that matter</h3>
+  <div class="nums four">
+    <div class="num-card">
+      <div class="v warm">+19%</div>
+      <div class="k">METR study (Jul 2025)</div>
+      <div class="x">Experienced OSS devs took 19% LONGER on real issues with AI allowed. They believed they were 20% faster.</div>
+    </div>
+    <div class="num-card">
+      <div class="v cool">~0%</div>
+      <div class="k">Copilot longitudinal</div>
+      <div class="x">26K commits analyzed pre/post Copilot. No statistically significant change in commit activity.</div>
+    </div>
+    <div class="num-card">
+      <div class="v good">60-75%</div>
+      <div class="k">Subjective fulfilment</div>
+      <div class="x">Same Copilot study: 60-75% report higher fulfilment, more flow. Productivity is subjective, not objective.</div>
+    </div>
+    <div class="num-card">
+      <div class="v">20→40%</div>
+      <div class="k">Trust gradient</div>
+      <div class="x">Anthropic data: auto-approve rate climbs from ~20% (50 sessions) to ~40% (750 sessions). The one reproducible objective metric.</div>
+    </div>
+  </div>
+
+  <p>The pattern: <b>AI feels productive even when it isn't</b>. Output works but fails code review (missing tests, lint, quality standards) — the cleanup tax doesn't show up in benchmarks. Real-world devs end up doing roughly the same work, but rate the experience higher.</p>
+
+  <div class="callout warn">
+    <span class="tag">honest take</span>
+    Karpathy's 80/20 is <b>aspirational vibes</b>. METR's slowdown is <b>reproducible</b>. The gap between subjective speed and objective speed is real and persistent. Don't let prestige names override published data.
+  </div>
+
+  <h3>the minimum reasonable measurement setup</h3>
+  <ol>
+    <li><b>Cost telemetry.</b> Anthropic Console / OpenAI dashboard / Helicone / Langfuse. Free tier handles 10K-50K events. Watch monthly spend trend; serious daily-driver use lands $30-200/mo.</li>
+    <li><b>Auto-approve trend.</b> Count permission prompts per session, plot over 4 weeks. Climbing = building trust or getting predictable. Flat or declining = something broke.</li>
+    <li><b>4-week on/off cycles.</b> Pick one recurring task. 2 weeks no agent (baseline) → 2 weeks with. Log time + cost + 1-5 quality rating. Confounds abound but qualitative differences reveal themselves.</li>
+    <li><b>Friday smoke test.</b> Every Friday, run 5-10 tasks the same way. Compare to week 1. Drift detection without infrastructure.</li>
+  </ol>
+  <p style="font-size: 14px; color: var(--ink-soft);">~2 hours of setup. ~10 min/week ongoing. Result: you'll know if your agent is silently underperforming, before $47k worth of inference burn.</p>
+
+  <h2><span class="num">02</span>HRR — the math, and when it actually wins</h2>
+  <p>You saw the surface algebra in Part II. Here's the real math beneath, and the honest answer to "should I use this." Tony Plate's 1995 paper (<a href="https://redwood.berkeley.edu/wp-content/uploads/2020/08/Plate-HRR-IEEE-TransNN.pdf" target="_blank">PDF</a>) is foundational and still readable.</p>
+
+  <h3>the binding/unbinding mechanic, formalized</h3>
+
+  <div class="formula-box">
+    <h4>circular convolution + correlation = bind + unbind</h4>
+    <div class="row">
+      <div class="lbl">binding</div>
+      <div>
+        <div class="formula"><span class="v">a</span> <span class="op">⊛</span> <span class="v">b</span> = F⁻¹(F(<span class="v">a</span>) ⊙ F(<span class="v">b</span>))</div>
+        <div class="desc">F = FFT, ⊙ = element-wise product. O(d log d) via FFT vs O(d²) direct.</div>
+      </div>
+    </div>
+    <div class="row">
+      <div class="lbl">unbinding</div>
+      <div>
+        <div class="formula">(<span class="v">a</span> <span class="op">⊛</span> <span class="v">b</span>) <span class="op">⊘</span> <span class="v">a</span> ≈ <span class="out">b</span></div>
+        <div class="desc">⊘ is circular correlation (approximate inverse). Lossy — recovers b plus noise proportional to memory load.</div>
+      </div>
+    </div>
+    <div class="row">
+      <div class="lbl">superposition</div>
+      <div>
+        <div class="formula">memory = <span class="v">a₁</span> <span class="op">⊛</span> <span class="v">b₁</span> + <span class="v">a₂</span> <span class="op">⊛</span> <span class="v">b₂</span> + ... + <span class="v">aₙ</span> <span class="op">⊛</span> <span class="v">bₙ</span></div>
+        <div class="desc">All facts summed into one fixed-width vector. Capacity ~O(d/k) for d-dim vectors and k-dim per binding.</div>
+      </div>
+    </div>
+  </div>
+
+  <h3>HRR vs HDC (Kanerva)</h3>
+  <p>The other family of vector-symbolic architectures, from Pentti Kanerva's 2009 work. Same goal, different mechanics:</p>
+
+  <div class="lb-wrap">
+    <table class="lb">
+      <thead>
+        <tr><th>property</th><th>HRR (Plate)</th><th>HDC (Kanerva)</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>binding</td><td>circular convolution (FFT)</td><td>XOR / Hadamard product</td></tr>
+        <tr><td>vector type</td><td>real / complex, dense</td><td>binary, sparse</td></tr>
+        <tr><td>typical d</td><td>512–4096</td><td>10,000–100,000</td></tr>
+        <tr><td>unbinding</td><td>correlation</td><td>XOR again</td></tr>
+        <tr><td>hardware fit</td><td>GPU (FFT-friendly)</td><td>FPGA / neuromorphic / analog</td></tr>
+        <tr class="pick-row"><td>practical for AI agents</td><td><span class="name">yes (Hermes uses d=1024)</span></td><td>niche — needs binary-friendly hardware</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>HRR vs RAG + reranker — the head-to-head</h3>
+  <div class="lb-wrap">
+    <table class="lb">
+      <thead>
+        <tr><th>metric</th><th>RAG (dense + rerank)</th><th>HRR</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>top-1 precision</td><td class="num">~85-92% (BEIR)</td><td class="num">~80-88%</td></tr>
+        <tr><td>top-5 recall</td><td class="num">~88-94%</td><td class="num">~82-90%</td></tr>
+        <tr><td>memory overhead</td><td>full embeddings × N</td><td>one d-dim vector for N facts</td></tr>
+        <tr><td>compositional queries</td><td>requires query expansion</td><td>native algebra (<code>memory ⊘ alice⊛role</code>)</td></tr>
+        <tr><td>latency</td><td>O(log N) ANN + O(k log k) rerank</td><td>O(d log d) FFT + O(1) unbind</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="callout note">
+    <span class="tag">when HRR wins</span>
+    Knowledge-graph-shaped queries: "what role does <i>X</i> play?", "facts about <i>X</i> AND <i>Y</i>". Local-only / private (no API). Less than ~10k facts. <b>HRR is production-ready but niche.</b> 2026 production agents converge on hybrid: vector + episodic + graph, with HRR as the vector layer when compositional retrieval matters.
+  </div>
+
+  <h3>capacity: what breaks at scale</h3>
+  <p>Plate's analysis: a d-dim vector cleanly stores ~<b>O(d/k)</b> bound pairs before signal-to-noise degrades. For d=1024 (Hermes default), that's <b>40-100 facts</b>. For d=4096, ~250. For d=10,000, ~1000. After that, unbinding returns superpositions of multiple values — the model has to disambiguate.</p>
+  <p>The 2026 papers (<a href="https://arxiv.org/abs/2111.06077" target="_blank">Kleyko et al. survey</a>) show that learned binding (<a href="https://proceedings.neurips.cc/paper/2021/file/d71dd235287466052f1630f31bde7932-Paper.pdf" target="_blank">Schlegel NeurIPS 2021</a>) closes some of this gap by training the binding op end-to-end with the rest of the model. Niche; not in Hermes yet.</p>
+
+  <h2><span class="num">03</span>Memory consolidation / "dreaming" — the frontier</h2>
+  <p class="big">Anthropic shipped this in May 2026 as a research-preview. The interesting part: the algorithm is <i>not</i> novel. It's just <b>scheduled LLM-as-judge over your transcripts</b>. The novelty is shipping it as a feature instead of leaving it as a paper.</p>
+
+  <h3>what dreaming actually does</h3>
+  <div class="algo">
+    <h4>the consolidation algorithm — reverse-engineered</h4>
+    <ol>
+      <li><b>Retrieve</b> N most recent sessions (or all since last consolidation)</li>
+      <li><b>Extract</b> salient facts: repeated patterns, mistakes, learnings, preferences. LLM call.</li>
+      <li><b>Cluster</b> or <b>match</b> new facts against existing long-term memory (embedding similarity OR LLM judgment)</li>
+      <li><b>Merge</b>: <code>UPDATE</code> contradictions, <code>DELETE</code> stale entries, <code>ADD</code> novel insights</li>
+      <li><b>Score</b> candidates: relevance · frequency · recency · consolidation-readiness (weighted ranking)</li>
+      <li><b>Write</b> consolidated notes and playbooks back to persistent store</li>
+    </ol>
+  </div>
+  <p>That's it. No new math. The leverage is in <b>scheduling</b> (offload to off-peak compute), <b>incremental updates</b> (don't re-process everything), and <b>auditability</b> (consolidated notes are inspectable plain text).</p>
+
+  <h3>the four shipping consolidation patterns</h3>
+  <div class="patterns">
+    <div class="pattern-card win">
+      <div class="name">Anthropic dreaming</div>
+      <div class="desc">Scheduled review of full transcripts. Writes plain-text notes + playbooks. Harvey reports 6× completion-rate improvement post-rollout. <a href="https://claude.com/blog/new-in-claude-managed-agents" target="_blank">announcement</a></div>
+      <div class="verdict">→ best if you're on Anthropic's API stack</div>
+    </div>
+    <div class="pattern-card win">
+      <div class="name">Letta sleep-time subagents</div>
+      <div class="desc">Background reflection rewrites memory blocks. Off-peak compute. User can also <code>/remember</code> to trigger manually. <a href="https://github.com/letta-ai/letta" target="_blank">repo</a></div>
+      <div class="verdict">→ best for self-hosted on Postgres</div>
+    </div>
+    <div class="pattern-card note">
+      <div class="name">Mem0 incremental clustering</div>
+      <div class="desc">New facts matched against top-K existing memories via embeddings + LLM judgment. <code>ADD/UPDATE/DELETE/NOOP</code> per pair. Real-time, not batched. <a href="https://github.com/mem0ai/mem0" target="_blank">repo</a></div>
+      <div class="verdict">→ best when consolidation must be live</div>
+    </div>
+    <div class="pattern-card note">
+      <div class="name">Honcho async reasoning</div>
+      <div class="desc">Background dreaming agent crawls user data, fills gaps, forms hypotheses. Peer cards + abductive inference. Plastic Labs' bet. <a href="https://github.com/plastic-labs/honcho" target="_blank">repo</a></div>
+      <div class="verdict">→ best for cross-platform user modeling</div>
+    </div>
+  </div>
+
+  <h3>cost &amp; cadence</h3>
+  <div class="nums">
+    <div class="num-card">
+      <div class="v">~10 min</div>
+      <div class="k">to consolidate 900 sessions</div>
+      <div class="x">background batch on Haiku/Sonnet. Off-peak; run nightly at 3am.</div>
+    </div>
+    <div class="num-card">
+      <div class="v">~50-100</div>
+      <div class="k">lines of Python (DIY)</div>
+      <div class="x">Cron job + Claude API + filesystem-as-memory. Reference: grandamenium/dream-skill on GitHub.</div>
+    </div>
+    <div class="num-card">
+      <div class="v cool">20+/wk</div>
+      <div class="k">threshold for caring</div>
+      <div class="x">Below ~20 sessions/week, dreaming is premature optimization. Above, it's where context-drift bites.</div>
+    </div>
+  </div>
+
+  <div class="callout warn">
+    <span class="tag">the dark side</span>
+    <a href="https://arxiv.org/abs/2603.11768" target="_blank">arXiv:2603.11768 (Mar 2026)</a>: memory poisoning, semantic drift, and hallucination during consolidation are real failure modes. Read before shipping. Auditable plain-text consolidation (Anthropic's design) is partly a response to this.
+  </div>
+
+  <h2><span class="num">04</span>Multi-agent — reality check</h2>
+  <p class="big">A2A is real. Frameworks exist. But the production data is harsh: <b>41-86% of multi-agent systems fail</b>, mostly from poor task decomposition and missing termination conditions. And they cost <b>3-5× the tokens</b> of equivalent single-agent setups.</p>
+
+  <h3>the protocol stack, sorted</h3>
+  <ul>
+    <li><b>MCP</b> (Model Context Protocol) — <i>agent-to-tool</i>. Anthropic-led, governed by Linux Foundation AAIF since Dec 2025.</li>
+    <li><b>A2A</b> (Agent2Agent Protocol) — <i>agent-to-agent</i>. Google-led, 150 production deployments first year (Netflix, Harvey, Salesforce, AWS, Microsoft). JSON Agent Cards for capability discovery, SSE for streaming.</li>
+    <li><b>ACP</b> (Agent Communication Protocol) — IBM's. <i>Merged into A2A August 2025.</i> Don't track separately.</li>
+  </ul>
+  <p><b>MCP and A2A are complementary</b>, not competing. Both governed by the same foundation. Most personal-AI builders don't need to think about A2A yet — it matters when crossing organizational/vendor boundaries.</p>
+
+  <h3>orchestration patterns — what works</h3>
+  <div class="patterns">
+    <div class="pattern-card win">
+      <div class="name">Supervisor-worker</div>
+      <div class="desc">One orchestrator decomposes tasks, routes to specialists, recombines. <b>~70% of production deployments.</b> Boring; works.</div>
+      <div class="verdict">→ if you must have multi-agent, this is the shape</div>
+    </div>
+    <div class="pattern-card skip">
+      <div class="name">Swarm / mesh</div>
+      <div class="desc">Peer-to-peer, no coordinator. Theoretically elegant. <b>Rarely outperforms hierarchy in practice.</b> Most "swarm" deployments are supervisor-worker in disguise.</div>
+      <div class="verdict">→ academic interest only</div>
+    </div>
+    <div class="pattern-card note">
+      <div class="name">Pipeline (A → B → C)</div>
+      <div class="desc">Linear hand-off. Works for fundamentally sequential workflows (ingest → enrich → write). Single agent + tools usually does this better.</div>
+      <div class="verdict">→ probably should be one agent</div>
+    </div>
+    <div class="pattern-card note">
+      <div class="name">Critic / judge</div>
+      <div class="desc">One agent generates, another evaluates. Useful for self-correction loops. Anthropic's Constitutional AI pattern.</div>
+      <div class="verdict">→ niche but legitimate</div>
+    </div>
+  </div>
+
+  <h3>framework status as of May 2026</h3>
+  <div class="lb-wrap">
+    <table class="lb">
+      <thead>
+        <tr><th>framework</th><th>status</th><th>verdict</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><span class="name">Microsoft AutoGen</span></td><td>maintenance mode</td><td>v0.4 rewrite (AG2) exists; no new investment</td></tr>
+        <tr><td><span class="name">CrewAI</span></td><td>active</td><td>production-ready for supervisor-worker</td></tr>
+        <tr class="pick-row"><td><span class="name">LangGraph</span></td><td>actively developed</td><td>strongest production choice; LangSmith observability</td></tr>
+        <tr class="pick-row"><td><span class="name">OpenAI Agents SDK</span></td><td>active (Apr 2026)</td><td>evolved from Swarm; sandboxing + long-horizon harness</td></tr>
+        <tr class="pick-row"><td><span class="name">Claude Managed Agents</span></td><td>just shipped (May 2026)</td><td>multi-agent + dreaming + outcomes; managed service</td></tr>
+        <tr><td><span class="name">Google ADK</span></td><td>active</td><td>fine if you're on Google Cloud</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>the cost math</h3>
+  <div class="nums">
+    <div class="num-card">
+      <div class="v warm">3-5×</div>
+      <div class="k">token overhead</div>
+      <div class="x">Multi-agent generates 3-5× more tokens than equivalent single-agent. Coordination, hand-offs, redundant context.</div>
+    </div>
+    <div class="num-card">
+      <div class="v warm">68%</div>
+      <div class="k">would've worked single</div>
+      <div class="x">Analysis of 47 production deployments: 68% would have been better as one smart agent with rich tools.</div>
+    </div>
+    <div class="num-card">
+      <div class="v warm">41-86%</div>
+      <div class="k">failure rate</div>
+      <div class="x">Multi-agent orchestration failures in production. Mostly poor task decomposition, missing termination, deadlocks.</div>
+    </div>
+  </div>
+
+  <div class="callout warn">
+    <span class="tag">honest take</span>
+    For one user with one personal corpus and one MCP search server: <b>do not add a second agent</b>. "Research agent + writing agent + scheduler" sounds elegant. In practice, one smart agent with research tools, writing templates, and calendar access does 80% of the work at 20% the complexity. Add the second agent only when the first is bottlenecked on something it's measurably bad at — not speculatively.
+  </div>
+
+  <h2><span class="num">05</span>The recommended path through this</h2>
+  <p>Putting Parts I, II, and III together — what to actually do with all this:</p>
+  <ol>
+    <li><b>Build the simple stack</b> (Part I §08): <code>corpus/ + index.lance/ + config.yaml + search.py</code>. ~1 weekend.</li>
+    <li><b>Wire up minimal MCP server</b> (Part I §10 + Part II §04): ~30 lines of Python. Connect to Claude Code via <code>~/.claude/mcp_servers.json</code>.</li>
+    <li><b>Use it as a daily driver for 2 weeks</b> with no eval. Just use it. Get a feel.</li>
+    <li><b>Then set up minimal measurement</b> (Part III §01): cost telemetry + auto-approve trend log + Friday smoke test. ~2 hours setup.</li>
+    <li><b>Add ONE cron-driven task</b> (Part II §05): something specific and verifiable, like a weekly slack digest.</li>
+    <li><b>Don't add multi-agent</b> until you have a single workflow you can prove benefits from it. Most don't.</li>
+    <li><b>Add dreaming</b> only if memory growth becomes painful (~20+ sessions/week). Below that threshold, it's premature.</li>
+    <li><b>HRR-backed memory</b> is interesting but optional. Stick with vanilla embeddings unless you specifically need compositional queries.</li>
+  </ol>
+
+  <h2><span class="num">06</span>What's next at the frontier</h2>
+  <p>Genuinely open questions as of May 2026 — places where the answers haven't shipped yet:</p>
+  <ul>
+    <li><b>Reliable autonomy beyond ~30 minutes.</b> The $47k/11-day cost runaway is the warning shot. Nobody has shipped a confidently-autonomous agent that runs for hours unsupervised without drift, hallucination, or budget overruns.</li>
+    <li><b>True multi-source personal memory.</b> Slack + email + transcripts + calendar fused into one coherent memory. Pieces exist (Honcho, Mem0, Letta). No production framework does it elegantly.</li>
+    <li><b>Cross-device personal memory.</b> Laptop + phone + watch sharing one memory, with privacy. Embeddings leak ~94% reconstruction of sensitive attributes (<a href="https://arxiv.org/abs/2504.15965" target="_blank">arXiv:2504.15965</a>). The tooling isn't there.</li>
+    <li><b>Personal-scale objective productivity.</b> METR's slowdown finding hasn't been refuted. The way forward might be picking workflows where AI clearly wins (boilerplate, debugging, refactor-at-scale) and avoiding ones where it doesn't (architectural decisions, novel research).</li>
+    <li><b>HRR + learned binding.</b> Schlegel et al. showed end-to-end learned binding works. No production agent has shipped it yet. The first to do so might unlock genuinely compositional agent memory.</li>
+  </ul>
+
+  <footer>
+    <span>~/Galaxy/Grove/search/search-research/frontier.html</span>
+    <span>agent-readable: <a href="llms.txt">llms.txt</a> · <a href="papers.json">papers.json</a> · <a href="agents.json">agents.json</a> · <a href="harnesses.json">harnesses.json</a> · <a href="stacks.json">stacks.json</a></span>
+  </footer>
+</main>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('ts').textContent = new Date().toISOString().slice(0, 10);
+});
+</script>
+</body>
+</html>

@@ -7,6 +7,7 @@ frontier in models, infrastructure, and methods. Bias toward local-first.
 **Live pages:**
 - Part I — search & tagging: https://dmarzzz.github.io/search-research/
 - Part II — agent harnesses: https://dmarzzz.github.io/search-research/harnesses.html
+- Part III — production frontier: https://dmarzzz.github.io/search-research/frontier.html
 
 **Agent-readable summary:** https://dmarzzz.github.io/search-research/llms.txt
 
@@ -14,16 +15,17 @@ frontier in models, infrastructure, and methods. Bias toward local-first.
 
 - `index.html` — Part I: search & tagging research page (13 sections).
 - `harnesses.html` — Part II: agent harnesses, MCP integration, daily-driver patterns (8 sections).
+- `frontier.html` — Part III: production frontier — measurement, HRR math, dreaming consolidation, multi-agent reality check (6 sections).
 - `serve.sh` — runs a local http server on port 8424.
-- `papers.json` — frontier paper bibliography (loaded by the pages).
+- `papers.json` — frontier paper bibliography across all three parts (categories: embedding, rag, tagging, evaluation, memory, hrr, multi_agent).
 - `agents.json` — production-agent stack table (loaded by Part I).
 - `harnesses.json` — agent runtime characteristics (loaded by Part II).
 - `stacks.json` — corpus-size keyed stack recommendations (loaded by Part I).
-- `llms.txt` — agent-readable summary covering both parts. Drop this URL
-  into any LLM that can fetch web pages and it'll have the gist without
-  parsing HTML.
+- `llms.txt` — agent-readable summary covering all three parts. Drop this
+  URL into any LLM that can fetch web pages and it'll have the gist
+  without parsing HTML.
 
-Both HTML pages embed a JSON-LD `<script>` block describing the data
+All three HTML pages embed a JSON-LD `<script>` block describing the data
 files as `Dataset` resources, so well-behaved agents can discover the
 right URLs without scraping.
 

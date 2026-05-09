@@ -6,10 +6,11 @@ messages. Local-first bias, opinionated, all sources cited.
 
 ## live url
 
-- part i — search & tagging:  https://dmarzzz.github.io/search-research/
-- part ii — agent harnesses:  https://dmarzzz.github.io/search-research/harnesses.html
-- repo:                       https://github.com/dmarzzz/search-research
-- this file:                  https://dmarzzz.github.io/search-research/llms.txt
+- part i — search & tagging:    https://dmarzzz.github.io/search-research/
+- part ii — agent harnesses:    https://dmarzzz.github.io/search-research/harnesses.html
+- part iii — production frontier: https://dmarzzz.github.io/search-research/frontier.html
+- repo:                         https://github.com/dmarzzz/search-research
+- this file:                    https://dmarzzz.github.io/search-research/llms.txt
 
 ## what to read first
 
@@ -131,11 +132,48 @@ runtime that consumes them. Four areas:
   (avoid). Trust gradient: 20% auto-approve at start → 40% by 750
   sessions. Build for halfway-there; don't wait for unified agent.
 
+## part iii — production frontier (frontier.html)
+
+Four open questions at the edge of personal-AI in early 2026:
+
+- **Measuring agent value** — Karpathy's "80% agent" claim is
+  self-reported vibes. METR's reproducible RCT (Jul 2025): experienced
+  OSS devs took 19% LONGER on real issues with AI allowed, while feeling
+  20% faster. GitHub Copilot longitudinal: no significant change in
+  commit activity, but 60-75% report higher fulfilment. Productivity is
+  subjective, not objective. Honest minimum eval setup: cost telemetry
+  + auto-approve trend log + Friday smoke test (~2 hrs).
+
+- **HRR deep math** — Plate 1995. Binding via circular convolution
+  (FFT-based, O(d log d)). Unbinding via correlation. Capacity
+  ~O(d/k) — for Hermes's d=1024, ~40-100 facts per vector before
+  signal-to-noise degrades. HRR vs RAG+rerank: HRR loses ~5% precision
+  but wins on compositional queries and memory overhead. Production-ready
+  but niche; pick for knowledge-graph-shaped queries.
+
+- **Memory consolidation / dreaming** — Anthropic shipped May 2026.
+  Algorithm is just scheduled LLM-as-judge over transcripts (no novel
+  math). Harvey reports 6× completion improvement. Open-source
+  equivalents: Letta (sleep-time subagents), Mem0 (incremental
+  clustering), Honcho (async reasoning). DIY is ~50-100 lines of Python.
+  Threshold for caring: 20+ sessions/week. Below that, premature.
+
+- **Multi-agent / A2A reality check** — A2A is real, governed by Linux
+  Foundation AAIF alongside MCP. But: 41-86% of multi-agent systems
+  fail in production (poor task decomposition, missing termination).
+  3-5× token overhead vs single-agent. 68% of 47 production deployments
+  would have worked better as one smart agent. Supervisor-worker
+  dominates 70% of the rest. For one user with one corpus: do not add
+  a second agent unless you have a workflow that measurably benefits.
+
 ## recommended path forward
 
 1. Build minimal MCP server (~30 lines) — covered in §10 of part i
 2. Use Claude Code as daily driver — first-class MCP, plaintext state
-3. Add ONE cron-driven loop for a specific task
-4. Layer in dreaming-style consolidation when memory growth hurts
-5. Don't pursue full autonomy — trust gradient says aim for "background
-   runner" not "fully autonomous agent". Cost runaway risk is real.
+3. Use it for 2 weeks with no eval. Get a feel.
+4. Then set up minimal measurement: cost + auto-approve + Friday smoke test
+5. Add ONE cron-driven loop for a specific task
+6. Don't add multi-agent until you have a workflow that proves it benefits
+7. Add dreaming only if memory growth becomes painful (~20+ sessions/week)
+8. HRR-backed memory is interesting but optional. Stick with vanilla
+   embeddings unless you specifically need compositional queries.
