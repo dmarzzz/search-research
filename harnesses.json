@@ -1,0 +1,139 @@
+{
+  "_comment": "Agent harness runtime characteristics. agents.json catalogs memory architectures; this file catalogs RUNTIMES — how the harness loops, manages context, persists state, integrates MCP. Overlap is intentional (Claude Code / Goose / Hermes / Letta appear in both, viewed differently).",
+  "harnesses": [
+    {
+      "name": "Claude Code",
+      "by": "Anthropic",
+      "repo": "anthropic/claude-code",
+      "loop": "ReAct: model → tool → result → next",
+      "context": "auto-compact at ~98% (lossy summarization)",
+      "state": "JSONL plaintext under ~/.claude/projects/",
+      "mcp": "first-class — ~/.claude/mcp_servers.json",
+      "models": "Claude API (Bedrock / VertexAI routing)",
+      "ui": "CLI + IDE extensions",
+      "license": "proprietary",
+      "verdict": "★ winner for personal corpus + MCP — first-class, plaintext state, predictable loop, paranoid permissions"
+    },
+    {
+      "name": "Goose",
+      "by": "Block / Linux Foundation AAIF",
+      "repo": "block/goose",
+      "loop": "ReAct + reflection (learns from runs)",
+      "context": "sliding window + compaction on overflow",
+      "state": "SQLite (.goose/) + plaintext logs",
+      "mcp": "first-class — reference impl for MCP spec, 70+ extensions",
+      "models": "15+ providers (Claude, Sonnet, Grok, local) — BYOM",
+      "ui": "CLI + desktop app + API",
+      "license": "Apache 2.0",
+      "verdict": "★ best fully-open option — multi-provider, MCP is reference-quality, fluid UX"
+    },
+    {
+      "name": "Hermes Agent",
+      "by": "Nous Research",
+      "repo": "nousresearch/hermes-agent",
+      "loop": "agentic + skill-building (learns / distills runs into reusable skills)",
+      "context": "lossy summarization + persistent memory blocks (in-context across evictions)",
+      "state": "SQLite FTS5 + skills DB + 8 external memory providers (Holographic/HRR, Honcho, Hindsight, Supermemory)",
+      "mcp": "first-class — ~/.hermes/config.yaml registration, runtime listChanged notifications",
+      "models": "model-agnostic; 200+ providers via LiteLLM (Anthropic, OpenAI, Ollama, vLLM, OpenRouter)",
+      "ui": "CLI TUI + Hermes Desktop + Hermes Workspace + Telegram/Discord/Slack/Signal gateways",
+      "license": "Apache 2.0",
+      "verdict": "★★ memory-first — pick when you need cross-session learning, scheduled cron tasks, or HRR's algebraic composition"
+    },
+    {
+      "name": "Cursor",
+      "by": "Anysphere",
+      "repo": "—",
+      "loop": "agent executor with parallel subagents (/multitask in v3.2)",
+      "context": "codebase indexing + semantic search; per-subagent windows",
+      "state": "server-side (cloud-backed)",
+      "mcp": "first-class — context-breakdown UI",
+      "models": "multi-provider; Cursor cloud for cloud features",
+      "ui": "IDE (Electron)",
+      "license": "proprietary, cloud-locked",
+      "verdict": "skip for personal corpus — vendor lock, server-side state"
+    },
+    {
+      "name": "Cline",
+      "by": "Cline Bot",
+      "repo": "cline/cline",
+      "loop": "ReAct with sequential approval gates; read-only subagents",
+      "context": "token tracking + plan/work/next distillation",
+      "state": "VS Code workspace storage",
+      "mcp": "first-class — settings panel registration",
+      "models": "multi-provider (Claude, GPT, local)",
+      "ui": "VS Code extension",
+      "license": "Apache 2.0",
+      "verdict": "skip — IDE-bound, permission gates become friction, subagents are read-only"
+    },
+    {
+      "name": "Continue.dev",
+      "by": "Continue Inc",
+      "repo": "continuedev/continue",
+      "loop": "agent mode with tool-equipped Chat",
+      "context": "model-aware + codebase RAG",
+      "state": "extension state + .continue/ config",
+      "mcp": "first-class — 100+ model support",
+      "models": "100+ providers; truly agnostic",
+      "ui": "VS Code + JetBrains",
+      "license": "Apache 2.0",
+      "verdict": "fine for coding-in-IDE, not the right shape for general corpus work"
+    },
+    {
+      "name": "Letta",
+      "by": "Letta AI",
+      "repo": "letta-ai/letta",
+      "loop": "agent loop with self-managed memory (agent writes own memory)",
+      "context": "core (in-context) + recall (searchable history) + archival (indexed)",
+      "state": "Postgres (prod) / SQLite (dev) — automatic recall save",
+      "mcp": "second-class — native tool registry, MCP integration partial",
+      "models": "local + OpenAI + Anthropic via LiteLLM",
+      "ui": "CLI + web dashboard",
+      "license": "Apache 2.0",
+      "verdict": "elegant memory architecture but over-engineered for personal corpus — better as a chatbot backend"
+    },
+    {
+      "name": "Open Interpreter",
+      "by": "Open Interpreter",
+      "repo": "OpenInterpreter/open-interpreter",
+      "loop": "reactive: model → code gen → exec → error feedback → next",
+      "context": "minimal (prompt re-use only)",
+      "state": "plaintext session logs; no DB",
+      "mcp": "none (custom code execution only)",
+      "models": "any provider",
+      "ui": "CLI + Python API",
+      "license": "AGPL",
+      "verdict": "skip — not a harness, no state, no MCP. Good for one-off code-exec tasks only"
+    },
+    {
+      "name": "Open WebUI",
+      "by": "Open WebUI",
+      "repo": "open-webui/open-webui",
+      "loop": "frontend only — agent logic delegated to backend",
+      "context": "depends on backend",
+      "state": "chat history in WebUI; backend decides persistence",
+      "mcp": "depends on backend",
+      "models": "Ollama, OpenAI, Anthropic — depends on backend",
+      "ui": "web UI (ChatGPT-like)",
+      "license": "MIT (BSD-3-Clause moving forward)",
+      "verdict": "use as a UI for one of the above — not an agent runtime itself"
+    },
+    {
+      "name": "Aider",
+      "by": "Paul Gauthier",
+      "repo": "Aider-AI/aider",
+      "loop": "ReAct: model → file edits → lint/test → refine",
+      "context": "minimal in-harness (delegates to editor AST)",
+      "state": "git history + prompt cache",
+      "mcp": "no native (community experiments)",
+      "models": "Claude, GPT, Gemini, local",
+      "ui": "terminal-native CLI",
+      "license": "Apache 2.0",
+      "verdict": "skip for corpus work — git/code-edit centric, MCP is community-experimental"
+    }
+  ],
+  "verdict": {
+    "for_personal_corpus_plus_mcp": "Claude Code is the clear winner. Goose is the strong fully-open alternative. Hermes if memory-learning across sessions matters. Use Open WebUI as a frontend if you want a web UI on top. Skip the rest.",
+    "honest_take": "All three top picks (Claude Code, Goose, Hermes) work fine for the use case. The differentiator is taste: Claude Code if you trust Anthropic's stack and want polish; Goose if you want full openness and multi-provider routing; Hermes if you want the agent to learn skills across sessions."
+  }
+}

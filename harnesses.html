@@ -1,0 +1,571 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>harnesses — plugging the corpus into agent runtimes (2026)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,600;1,6..72,400&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "TechArticle",
+  "headline": "Plugging your corpus into agent harnesses — Hermes, Claude Code, Goose, and the daily-driver question",
+  "description": "Part II of search-research. Agent runtime architectures, MCP integration patterns, long-running loops, and what 'personal AI as daily driver' actually looks like in early 2026.",
+  "keywords": ["agent harness", "Hermes", "Claude Code", "Goose", "MCP", "Model Context Protocol", "personal AI", "daily driver", "long-running agent", "HRR", "holographic reduced representations"],
+  "datePublished": "2026-05-09",
+  "isPartOf": { "@type": "WebPage", "url": "index.html" },
+  "isAccessibleForFree": true,
+  "mainEntity": {
+    "@type": "ItemList",
+    "itemListElement": [
+      { "@type": "Dataset", "name": "Agent harness runtimes", "encodingFormat": "application/json", "url": "harnesses.json" },
+      { "@type": "Dataset", "name": "Production agent stacks", "encodingFormat": "application/json", "url": "agents.json" },
+      { "@type": "TextDigitalDocument", "name": "LLM-friendly summary", "encodingFormat": "text/plain", "url": "llms.txt" }
+    ]
+  }
+}
+</script>
+<style>
+  :root {
+    --bg: #f4efe4;
+    --bg-2: #ece6d8;
+    --bg-3: #e2dac7;
+    --ink: #221f1a;
+    --ink-soft: #4a443a;
+    --ink-mute: #7a715f;
+    --rule: #b8ad95;
+    --accent: #7d2b0f;
+    --cool: #2d4a5b;
+    --warm: #c0884a;
+    --good: #4a6b3a;
+    --hl: #d4a93b;
+    --code-bg: #1c1a16;
+    --code-ink: #e9e0c9;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: var(--bg); color: var(--ink); }
+  body { font-family: 'Newsreader', Georgia, serif; font-size: 18px; line-height: 1.55; }
+  main { max-width: 1100px; margin: 0 auto; padding: 64px 40px 120px; }
+
+  nav.crumbs {
+    font-family: 'JetBrains Mono', monospace; font-size: 12px;
+    color: var(--ink-soft); margin-bottom: 12px;
+  }
+  nav.crumbs a { color: var(--accent); }
+
+  header { border-bottom: 1px solid var(--rule); padding-bottom: 28px; margin-bottom: 36px; }
+  h1 { font-size: 44px; font-weight: 600; margin: 0 0 10px; letter-spacing: -0.02em; line-height: 1.05; }
+  .lede { color: var(--ink-soft); margin: 0; font-size: 19px; }
+  .meta { display: flex; gap: 18px; margin-top: 16px; font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--ink-soft); flex-wrap: wrap; }
+  .meta span b { color: var(--ink); font-weight: 500; }
+
+  .tldr { background: var(--ink); color: var(--bg); padding: 22px 28px; border-radius: 4px; margin: 24px 0 0; font-size: 18px; line-height: 1.55; }
+  .tldr .label { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 0.18em; color: var(--hl); display: block; margin-bottom: 8px; }
+  .tldr b { color: var(--hl); font-weight: 600; }
+
+  h2 { font-size: 28px; font-weight: 600; margin: 60px 0 14px; padding-top: 32px; border-top: 1px solid var(--rule); letter-spacing: -0.005em; line-height: 1.15; }
+  h2 .num { font-family: 'JetBrains Mono', monospace; font-size: 14px; color: var(--accent); margin-right: 14px; vertical-align: 6px; }
+  h3 { font-size: 17px; font-weight: 600; margin: 28px 0 10px; color: var(--ink-soft); text-transform: uppercase; letter-spacing: 0.1em; }
+  p { margin: 12px 0; }
+  .big { font-size: 21px; line-height: 1.55; }
+  code, .mono { font-family: 'JetBrains Mono', monospace; font-size: 14px; }
+  p code, li code { background: var(--bg-2); padding: 1px 6px; border-radius: 3px; font-size: 0.85em; }
+  pre { background: var(--code-bg); color: var(--code-ink); padding: 18px 20px; overflow-x: auto; border-radius: 4px; font-size: 13px; line-height: 1.55; }
+  pre .kw { color: #d8a657; }
+  pre .str { color: #a9b665; }
+  pre .com { color: #7c6f64; font-style: italic; }
+  pre .fn { color: #7daea3; }
+  a { color: var(--accent); }
+
+  /* === DATAFLOW DIAGRAM === */
+  .flow {
+    display: grid; grid-template-columns: 1fr auto 1fr auto 1fr;
+    gap: 18px; align-items: center;
+    background: var(--bg-2); border: 1px solid var(--rule);
+    border-radius: 6px; padding: 28px 24px; margin: 24px 0;
+  }
+  .flow .node {
+    background: var(--bg); border: 1px solid var(--rule);
+    border-radius: 4px; padding: 18px 16px;
+    text-align: center;
+  }
+  .flow .node.you { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+  .flow .node.harness { background: var(--bg-3); border-left: 3px solid var(--accent); }
+  .flow .node.mcp { border-left: 3px solid var(--cool); }
+  .flow .node.corpus { border-left: 3px solid var(--good); }
+  .flow .node .lbl {
+    font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 0.1em;
+    color: var(--accent); text-transform: uppercase;
+  }
+  .flow .node.you .lbl { color: var(--hl); }
+  .flow .node .nm { font-weight: 600; font-size: 16px; margin: 4px 0; }
+  .flow .node .ex {
+    font-family: 'JetBrains Mono', monospace; font-size: 11px;
+    color: var(--ink-soft); line-height: 1.4;
+  }
+  .flow .node.you .ex { color: var(--bg-2); }
+  .flow .arrow {
+    color: var(--rule); font-size: 22px;
+    text-align: center;
+  }
+
+  /* === LEADERBOARD TABLES === */
+  .lb-wrap { margin: 18px 0; overflow-x: auto; }
+  table.lb { width: 100%; border-collapse: collapse; font-family: 'JetBrains Mono', monospace; font-size: 12px; }
+  table.lb th, table.lb td { padding: 9px 10px; text-align: left; border-bottom: 1px solid var(--rule); vertical-align: top; }
+  table.lb th { font-weight: 600; color: var(--ink-soft); font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; background: var(--bg-2); }
+  table.lb tr:hover td { background: var(--bg-2); }
+  table.lb td .name { font-weight: 600; color: var(--ink); }
+  table.lb td .by { display: block; font-size: 10px; color: var(--ink-mute); font-style: italic; margin-top: 2px; }
+  table.lb td .lic { color: var(--good); }
+  table.lb td .lic.proprietary { color: var(--accent); }
+  table.lb .pick-row td { background: rgba(212, 169, 59, 0.12); }
+  table.lb .pick-row td .name::before { content: '★ '; color: var(--hl); font-weight: 700; }
+  table.lb tr.harness-row td { border-bottom: none; padding-bottom: 4px; }
+  table.lb tr.verdict-row td {
+    background: var(--bg-3); color: var(--ink-soft);
+    font-family: 'Newsreader', Georgia, serif; font-size: 14px;
+    line-height: 1.4; padding: 4px 14px 12px; border-bottom: 1px solid var(--rule); font-style: italic;
+  }
+
+  /* === CALLOUTS === */
+  .callout { background: var(--bg-2); border: 1px solid var(--rule); padding: 14px 18px; border-radius: 4px; margin: 16px 0; font-size: 16px; }
+  .callout.warn { border-left: 3px solid var(--accent); background: var(--bg); }
+  .callout.note { border-left: 3px solid var(--cool); }
+  .callout.good { border-left: 3px solid var(--good); }
+  .callout .tag { display: inline-block; font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 0.15em; text-transform: uppercase; color: var(--accent); font-weight: 600; margin-right: 8px; }
+  .callout.note .tag { color: var(--cool); }
+  .callout.good .tag { color: var(--good); }
+
+  /* === NUMBERS === */
+  .nums { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin: 20px 0; }
+  .num-card { background: var(--bg-2); border: 1px solid var(--rule); border-radius: 4px; padding: 16px 18px; }
+  .num-card .v { font-family: 'JetBrains Mono', monospace; font-size: 32px; font-weight: 700; color: var(--accent); line-height: 1.0; }
+  .num-card .k { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--ink-soft); text-transform: uppercase; letter-spacing: 0.05em; margin-top: 6px; }
+  .num-card .x { font-size: 14px; color: var(--ink-soft); margin-top: 8px; }
+
+  /* === LOOP DIAGRAMS === */
+  .loop-types { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; margin: 18px 0; }
+  .loop {
+    background: var(--bg-2); border: 1px solid var(--rule);
+    border-radius: 4px; padding: 16px;
+  }
+  .loop .name { font-weight: 600; font-size: 16px; margin-bottom: 4px; }
+  .loop .when { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--accent); margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.05em; }
+  .loop .desc { font-size: 14px; color: var(--ink-soft); line-height: 1.45; margin: 4px 0; }
+  .loop .fail {
+    margin-top: 10px; padding-top: 10px; border-top: 1px dotted var(--rule);
+    font-size: 13px;
+  }
+  .loop .fail b { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--accent); text-transform: uppercase; }
+
+  /* === FAILURE CARDS === */
+  .fails { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; margin: 18px 0; }
+  .fail-card {
+    background: var(--bg-2); border: 1px solid var(--rule);
+    border-left: 3px solid var(--accent);
+    border-radius: 0 3px 3px 0; padding: 14px 16px;
+  }
+  .fail-card .name { font-weight: 600; font-size: 16px; }
+  .fail-card .desc { font-size: 14px; color: var(--ink-soft); line-height: 1.45; margin-top: 4px; }
+  .fail-card .fix { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--good); margin-top: 8px; }
+  .fail-card .fix::before { content: 'fix: '; color: var(--ink-mute); }
+
+  /* === HRR DIAGRAM === */
+  .hrr {
+    background: var(--bg-2); border: 1px solid var(--rule); border-radius: 6px;
+    padding: 24px; margin: 18px 0;
+  }
+  .hrr h4 {
+    font-family: 'JetBrains Mono', monospace; font-size: 11px;
+    text-transform: uppercase; letter-spacing: 0.12em;
+    color: var(--accent); margin: 0 0 12px;
+  }
+  .hrr .examples { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+  .hrr .ex {
+    background: var(--bg); border: 1px solid var(--rule);
+    border-radius: 4px; padding: 14px;
+  }
+  .hrr .ex .label { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--ink-soft); text-transform: uppercase; letter-spacing: 0.05em; }
+  .hrr .ex .formula {
+    font-family: 'JetBrains Mono', monospace; font-size: 14px;
+    margin: 8px 0; line-height: 1.7;
+  }
+  .hrr .ex .formula .v { color: var(--cool); font-weight: 600; }
+  .hrr .ex .formula .op { color: var(--accent); font-weight: 700; }
+  .hrr .ex .desc { font-size: 13px; color: var(--ink-soft); line-height: 1.4; margin-top: 8px; }
+
+  footer { margin-top: 64px; padding-top: 24px; border-top: 1px solid var(--rule); font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--ink-soft); display: flex; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
+
+  @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; } }
+  @media (max-width: 880px) {
+    main { padding: 32px 20px 80px; }
+    h1 { font-size: 32px; }
+    .flow { grid-template-columns: 1fr; }
+    .flow .arrow { transform: rotate(90deg); }
+    .nums, .loop-types, .fails { grid-template-columns: 1fr; }
+    .hrr .examples { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+<main>
+  <nav class="crumbs">
+    <a href="index.html">part i — search &amp; tagging</a>
+    &nbsp;&rsaquo;&nbsp; part ii — agent harnesses
+  </nav>
+
+  <header>
+    <h1>Plugging your corpus into agent harnesses</h1>
+    <p class="lede">Part II of search-research. Once you have a corpus + index + MCP server, the next question is: what runs on top? Hermes, Claude Code, Goose — and what does "personal AI as daily driver" actually look like in early 2026?</p>
+    <div class="meta">
+      <span>focus: <b>runtime layer</b></span>
+      <span>integration: <b>MCP</b></span>
+      <span>shape: <b>daily driver</b></span>
+      <span>compiled: <b id="ts">—</b></span>
+    </div>
+
+    <div class="tldr">
+      <span class="label">if you only read one thing</span>
+      Three harnesses are worth your time as a daily driver: <b>Claude Code</b> (winner — first-class MCP, predictable loop, plaintext state), <b>Goose</b> (best fully-open alternative), and <b>Hermes Agent</b> (memory-first, learns skills across sessions). All three connect to a custom MCP server in &lt;5 lines of config. <b>Personal AI as primary tool isn't yet mainstream</b> — Karpathy ships at 80% agent, Simon Willison ships partial — but the halfway-there patterns are real.
+    </div>
+  </header>
+
+  <h2><span class="num">01</span>How it all fits together</h2>
+  <p>The picture, end to end. Your corpus is on disk; an MCP server exposes search/get/similar; an agent harness orchestrates the model loop and calls the MCP server when it decides it needs to. You sit at the harness, not at the corpus.</p>
+
+  <div class="flow">
+    <div class="node corpus">
+      <div class="lbl">storage</div>
+      <div class="nm">corpus/ + index.lance/</div>
+      <div class="ex">files + vectors<br>regeneratable</div>
+    </div>
+    <div class="arrow">→</div>
+    <div class="node mcp">
+      <div class="lbl">protocol</div>
+      <div class="nm">MCP server</div>
+      <div class="ex">~30 lines<br>search() · get()</div>
+    </div>
+    <div class="arrow">→</div>
+    <div class="node harness">
+      <div class="lbl">runtime</div>
+      <div class="nm">agent harness</div>
+      <div class="ex">claude code<br>goose · hermes</div>
+    </div>
+  </div>
+
+  <p style="text-align: center; font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--ink-soft); margin-top: 8px;">↑ MCP is the boundary. Everything left is yours; everything right is swappable.</p>
+
+  <h2><span class="num">02</span>Hermes Agent — the deep dive</h2>
+  <p>You asked about Hermes specifically. Here's what's actually shipping. <a href="https://github.com/nousresearch/hermes-agent" target="_blank">github.com/nousresearch/hermes-agent</a> · v0.13 "Tenacity Release" (May 7, 2026) · 140K stars · actively developed · Apache 2.0.</p>
+
+  <h3>the agent loop</h3>
+  <p><b>ReAct-derivative.</b> A user turn becomes one agent invocation: assemble system prompt (frozen per session for cache reuse) → API call → parse reasoning + tool calls → execute all tools in parallel → collect → loop or conclude. The architecture optimizes for <i>prompt stability</i> (10× cost savings via cache) over turn-by-turn granularity. Skills are loaded in three tiers — summary → full → references-only — to avoid context bloat.</p>
+
+  <h3>HRR memory — what it actually does</h3>
+  <p>This is the architecturally novel piece. Hermes's <b>Holographic memory provider</b> stores memories as superposed complex-valued vectors in local SQLite. Memories compose <i>algebraically</i> via circular convolution, not by cosine similarity. In practice:</p>
+
+  <div class="hrr">
+    <h4>circular convolution as memory composition</h4>
+    <div class="examples">
+      <div class="ex">
+        <div class="label">storing</div>
+        <div class="formula">
+          memory = <span class="v">user</span> <span class="op">⊛</span> <span class="v">prefers</span> <span class="op">⊛</span> <span class="v">async</span><br>
+          + <span class="v">user</span> <span class="op">⊛</span> <span class="v">role</span> <span class="op">⊛</span> <span class="v">writer</span>
+        </div>
+        <div class="desc">two facts <i>superposed</i> in one vector. <code>⊛</code> is binding (circular convolution).</div>
+      </div>
+      <div class="ex">
+        <div class="label">querying — "what role?"</div>
+        <div class="formula">
+          memory <span class="op">⊘</span> (<span class="v">user</span> <span class="op">⊛</span> <span class="v">role</span>)<br>
+          ≈ <span class="v">writer</span>
+        </div>
+        <div class="desc">unbinding by inverse convolution recovers the bound value. <i>algebra, not similarity.</i></div>
+      </div>
+    </div>
+  </div>
+
+  <p>The win over vanilla embeddings: <b>compositional queries</b>. "Facts about user AND async" is one operation, not a two-step retrieve-then-filter. Trade-off: HRR is harder to reason about, requires NumPy at runtime (silently falls back to FTS5 if missing), and benefits scale with how compositional your queries are.</p>
+
+  <h3>memory tiers + external providers</h3>
+  <ul>
+    <li><b>Built-in:</b> <code>MEMORY.md</code> (sessions, FTS5-searchable) + <code>USER.md</code> (static profile)</li>
+    <li><b>External providers (8):</b> Holographic (HRR), <a href="https://github.com/plastic-labs/honcho">Honcho</a> (cloud user modeling), Hindsight (knowledge graph + temporal), Supermemory (semantic + context fencing), and four more</li>
+    <li><b>Consolidation:</b> on-demand only — <code>skill_manage</code> distills runs into reusable markdown runbooks. <i>No automatic dreaming yet.</i></li>
+  </ul>
+
+  <h3>plugging in your MCP server</h3>
+<pre><span class="com"># ~/.hermes/config.yaml</span>
+mcp_servers:
+  my_corpus:
+    command: <span class="str">"python /Users/me/Galaxy/Grove/search/corpus-search/mcp_server.py"</span>
+    args: [<span class="str">"--port"</span>, <span class="str">"9999"</span>]
+    env:
+      LANCEDB_PATH: <span class="str">"/Users/me/Galaxy/Grove/search/corpus-search/index.lance"</span>
+    tools:
+      include: [<span class="str">"search"</span>, <span class="str">"get"</span>]   <span class="com"># whitelist; blacklist via exclude</span>
+</pre>
+  <p>Tools auto-namespace as <code>mcp_my_corpus_search</code>. Runtime listChanged notifications mean you can hot-reload without restart. The model sees the tool description and decides when to call.</p>
+
+  <h3>limitations &amp; gotchas</h3>
+  <ul>
+    <li><b>64K context floor</b> — models with &lt;64K rejected at startup; meta-cognition costs 10–50× the actual work on frontier models</li>
+    <li><b>HRR silently degrades</b> — missing NumPy falls back to FTS5-only with no warning (v0.9.0–0.13)</li>
+    <li><b>3B/8B models choke on deeply-nested tool schemas</b> — needs 70B+ or frontier for planning</li>
+    <li><b>MCP namespace collisions</b> — overlapping tool names across servers shadow silently. Use whitelists.</li>
+  </ul>
+
+  <div class="callout note">
+    <span class="tag">when to pick Hermes</span>
+    Need <b>cross-session learning</b> (skills built from past runs). Want <b>HRR's compositional memory</b>. Want a <b>scheduled cron-driven agent</b> that runs without you. Otherwise — Claude Code is the simpler path. Use both: Claude Code for active coding, Hermes for background workflows.
+  </div>
+
+  <h2><span class="num">03</span>The other harnesses worth knowing</h2>
+  <p>Compared on RUNTIME ARCHITECTURE — how each one loops, manages context, persists state, integrates MCP. Not feature lists. Loaded from <a href="harnesses.json"><code>harnesses.json</code></a>.</p>
+
+  <div class="lb-wrap">
+    <table class="lb">
+      <thead>
+        <tr>
+          <th>Harness</th>
+          <th>Loop</th>
+          <th>Context</th>
+          <th>State</th>
+          <th>MCP</th>
+          <th>Models</th>
+        </tr>
+      </thead>
+      <tbody id="harnesses-tbody"></tbody>
+    </table>
+  </div>
+
+  <div class="callout good">
+    <span class="tag">verdict</span>
+    For personal corpus + custom MCP server: <b>Claude Code</b> is the winner (first-class MCP, predictable, plaintext state). <b>Goose</b> is the strong fully-open alternative (multi-provider, MCP reference quality). <b>Hermes</b> if memory-learning across sessions is a core requirement. Skip the IDE-bound options (Cursor, Cline, Continue) for general agent work — they're tuned for code editing.
+  </div>
+
+  <h2><span class="num">04</span>MCP integration — what breaks at scale</h2>
+  <p>The minimal MCP server is ~30 lines. It works. But once you wire it into a daily driver alongside other servers, the failure modes get specific.</p>
+
+  <h3>the tool-bloat curve</h3>
+  <p>The single most-cited 2026 finding from the field: <b>tool selection accuracy collapses as MCP server count grows</b>. From an 856-tool study and Atlassian's <a href="https://www.atlassian.com/blog/development/mcp-compression-preventing-tool-bloat-in-ai-agents">mcp-compressor</a> work:</p>
+
+  <div class="nums">
+    <div class="num-card">
+      <div class="v">98%</div>
+      <div class="k">5 servers preloaded</div>
+      <div class="x">~2k tokens of tool descriptions in the system prompt. accuracy ~98%.</div>
+    </div>
+    <div class="num-card">
+      <div class="v">35%</div>
+      <div class="k">15 servers preloaded</div>
+      <div class="x">~12k tokens. accuracy collapses — the model picks wrong tool 7 times in 8.</div>
+    </div>
+    <div class="num-card">
+      <div class="v">91%</div>
+      <div class="k">15 servers + tool search</div>
+      <div class="x">~800 tokens (lazy-loaded definitions). accuracy recovers. Claude Code 2026 ships this.</div>
+    </div>
+  </div>
+
+  <p><b>Practical limit:</b> 8–12 simultaneously-active MCP servers before degradation. Beyond that, lazy-load via tool search index, or aggressively whitelist.</p>
+
+  <h3>the gotchas, ranked by how often they bite</h3>
+
+  <div class="fails">
+    <div class="fail-card">
+      <div class="name">Tool description drift</div>
+      <div class="desc">The model reads tool descriptions to decide whether to call. Underspecified descriptions cause it to pick wrong tool, supply invalid args, retry-loop. Update descriptions when behavior changes.</div>
+      <div class="fix">treat tool descriptions as part of the API surface; version them</div>
+    </div>
+    <div class="fail-card">
+      <div class="name">LanceDB concurrent writes</div>
+      <div class="desc">Concurrent reads are safe (MVCC). Concurrent writes silently lose data after retry-limit exhaustion. If Claude Code AND Cursor both ingest, you'll lose updates.</div>
+      <div class="fix">single-writer pattern + advisory locks (fcntl)</div>
+    </div>
+    <div class="fail-card">
+      <div class="name">Cost runaway</div>
+      <div class="desc">Agent calls <code>search()</code> 50× per turn with slightly-different wording. November 2025: 4-agent market research pipeline ran 11 days, $47k bill.</div>
+      <div class="fix">rate limit in server (10/min/session) + tool budget in harness + recent-query dedup</div>
+    </div>
+    <div class="fail-card">
+      <div class="name">Stdio + stdout collision</div>
+      <div class="desc">Anything written to stdout breaks the JSON-RPC protocol. Logging library defaults to stdout. Server appears to crash with no useful error.</div>
+      <div class="fix">log to stderr always, or use MCP <code>notifications/message</code></div>
+    </div>
+    <div class="fail-card">
+      <div class="name">MCP version skew</div>
+      <div class="desc">2025-06-18 spec broke JSON-RPC batching. Old server + new client = malformed responses. 2025-11-25 added async tasks.</div>
+      <div class="fix">version-negotiate in <code>Initialize</code>; declare supported versions on both ends</div>
+    </div>
+    <div class="fail-card">
+      <div class="name">Hardcoded tokens in config</div>
+      <div class="desc"><code>~/.claude/mcp_servers.json</code> committed with API key. The classic. Local-only stdio servers don't need auth (process boundary IS the auth).</div>
+      <div class="fix">env vars, never config; .gitignore the config dir</div>
+    </div>
+  </div>
+
+  <h3>the daily-driver MCP setup</h3>
+<pre><span class="com"># ~/.claude/mcp_servers.json — the version that scales</span>
+{
+  <span class="str">"mcpServers"</span>: {
+    <span class="str">"corpus"</span>: {
+      <span class="str">"command"</span>: <span class="str">"python3"</span>,
+      <span class="str">"args"</span>: [<span class="str">"/Users/me/Galaxy/Grove/search/corpus-search/mcp_server.py"</span>],
+      <span class="str">"env"</span>: {
+        <span class="str">"LANCEDB_PATH"</span>: <span class="str">"/Users/me/Galaxy/Grove/search/corpus-search/index.lance"</span>,
+        <span class="str">"MAX_CALLS_PER_TURN"</span>: <span class="str">"10"</span>     <span class="com"># cost guard</span>
+      }
+    }
+  }
+}
+</pre>
+
+  <h2><span class="num">05</span>Long-running loops &amp; the daily-driver question</h2>
+  <p class="big">The honest answer: <b>"personal AI as primary tool" is not yet a mainstream production pattern</b>. The halfway-there versions are real and shipping. Here's the actual landscape.</p>
+
+  <h3>the loop shapes</h3>
+  <div class="loop-types">
+    <div class="loop">
+      <div class="name">Conversational</div>
+      <div class="when">sync, model in the loop</div>
+      <div class="desc">User types, agent responds, repeat. Default mode for Claude Code, Cursor, Cline. Best for active work — coding, writing, research.</div>
+      <div class="fail"><b>fails when</b> task takes longer than your attention; agent waits forever for input</div>
+    </div>
+    <div class="loop">
+      <div class="name">Cron-driven</div>
+      <div class="when">scheduled, async</div>
+      <div class="desc">Wake hourly/daily. Stateful cron ties schedule to a thread_id — every run appends to the same conversation. Hermes ships this natively.</div>
+      <div class="fail"><b>fails when</b> conversation history grows past usefulness — context drift over weeks</div>
+    </div>
+    <div class="loop">
+      <div class="name">Event-driven</div>
+      <div class="when">trigger on signal</div>
+      <div class="desc">File watcher, email arrival, calendar event, git push. Writer launched event-listener playbooks Nov 2025 — natural language, no code.</div>
+      <div class="fail"><b>fails when</b> the trigger fires on noise; agents respond to spam, churn through tokens</div>
+    </div>
+    <div class="loop">
+      <div class="name">Autonomous loop</div>
+      <div class="when">give it a goal</div>
+      <div class="desc">Agent picks its own next action. AutoGPT-style. Anthropic's "dreaming" + multi-agent orchestration pushes this further.</div>
+      <div class="fail"><b>fails when</b> the agent enters an unintended infinite loop — the $47k/11-day case is the warning shot</div>
+    </div>
+  </div>
+
+  <h3>what successful setups actually look like (early 2026)</h3>
+  <ul>
+    <li><b>Karpathy's three-layer stack</b> — tab completion (75% of work) + Claude Code for substantial chunks + ephemeral code for debugging. Plus an LLM Wiki: structured markdown files Obsidian can navigate, that Claude points at for complex questions. Smart home runs through "Dobby," a single WhatsApp agent. Moved from 80% human / 20% agent → 20% human / 80% agent in Dec 2025. <a href="https://medium.com/data-science-in-your-pocket/andrej-karpathys-llm-knowledge-bases-explained-2d9fd3435707" target="_blank">writeup</a>.</li>
+    <li><b>Simon Willison's setup</b> — heavy on shell-script glue between Claude API and a local SQLite. <a href="https://simonw.substack.com/p/agentic-engineering-patterns" target="_blank">Agentic Engineering Patterns</a> + <a href="https://www.youtube.com/watch?v=owmJyKVu5f8" target="_blank">Pragmatic Summit talk (Mar 2026)</a>.</li>
+    <li><b>Anthropic's "dreaming"</b> — Claude Managed Agents review past sessions, consolidate memory, surface patterns. The first time automatic consolidation shipped as a feature, not a paper. <a href="https://claude.com/blog/new-in-claude-managed-agents" target="_blank">announcement</a> · <a href="https://venturebeat.com/technology/anthropic-introduces-dreaming-a-system-that-lets-ai-agents-learn-from-their-own-mistakes" target="_blank">VentureBeat coverage</a>.</li>
+    <li><b>Stateful cron</b> — Vitalii Elenhaupt's Autobot ties cron to thread_id. Research agent builds on yesterday's findings. <a href="https://veelenga.github.io/how-agent-loop-and-cron-work-together-inside-autobot/" target="_blank">writeup</a>.</li>
+  </ul>
+
+  <h3>the failure modes that bite</h3>
+  <div class="fails">
+    <div class="fail-card">
+      <div class="name">Context drift</div>
+      <div class="desc">Agent operates for months; context slowly goes stale. Accuracy degrades because the world changed, not because the model did. Documented but undermonitored.</div>
+      <div class="fix">consolidate weekly; let dreaming/manual journaling refresh facts</div>
+    </div>
+    <div class="fail-card">
+      <div class="name">Hallucinated state</div>
+      <div class="desc">Inventory agent invents a nonexistent SKU, then calls four downstream APIs to price/stock/ship the phantom. One hallucination → multi-system incident.</div>
+      <div class="fix">read-after-write verification; require existing-id for actions</div>
+    </div>
+    <div class="fail-card">
+      <div class="name">Cost runaway</div>
+      <div class="desc">November 2025: a 4-agent market research pipeline entered an unintended infinite loop. Ran for 11 days. $47,000 bill.</div>
+      <div class="fix">hard budget enforcement at the governance layer — terminate before ceiling, not at it</div>
+    </div>
+    <div class="fail-card">
+      <div class="name">Stale memory</div>
+      <div class="desc">Facts in memory get out of date silently. "User prefers async" was true in March; now they don't. No mechanism flags it.</div>
+      <div class="fix">version memories with valid_at; use Zep-style temporal graphs if this is your bottleneck</div>
+    </div>
+  </div>
+
+  <h3>the trust gradient</h3>
+  <p>Anthropic's research on Claude Code: newer users grant full auto-approve <b>~20% of the time</b>. By 750 sessions, that jumps to <b>over 40%</b>. Trust compounds with experience. Email, calendar, code-push still require explicit approval in <i>all</i> shipping systems as of May 2026.</p>
+
+  <h2><span class="num">06</span>The recommended path forward</h2>
+  <p>For someone who has the corpus + index + simple stack from <a href="index.html">Part I</a>, the highest-leverage next moves:</p>
+
+  <ol>
+    <li><b>Build the minimal MCP server</b> (§10 of Part I). 30 lines. Wire into <code>~/.claude/mcp_servers.json</code>. <i>This alone gets you 80% of the value.</i></li>
+    <li><b>Use Claude Code as your daily driver.</b> Plaintext state, predictable loop, MCP first-class. Don't fight the tooling.</li>
+    <li><b>Add a cron-driven loop</b> for one specific task (e.g., "every Monday at 9am, summarize last week's slack into a digest"). <i>Don't try to make the agent autonomous — just scheduled.</i></li>
+    <li><b>Layer in dreaming-style consolidation</b> when memory growth becomes painful. Could be a manual weekly review, or — if you're on Anthropic's API — Claude Managed Agents with their dreaming feature.</li>
+    <li><b>Don't pursue full autonomy.</b> The trust gradient says it's not where you should aim. Aim for "helpful background runner" not "fully autonomous agent." The cost runaway risk is real.</li>
+  </ol>
+
+  <div class="callout warn">
+    <span class="tag">honest take</span>
+    None of this is the future. It's just the 2026 best-of-shipping. Karpathy is an optimist; the median knowledge worker still has a fragmented stack — Claude for writing, Perplexity for search, Granola for meetings, plus five other tools. Integrated personal AI is real but rare. Build for the halfway-there pattern; don't wait for the unified agent.
+  </div>
+
+  <h2><span class="num">07</span>What's not yet possible</h2>
+  <ul>
+    <li><b>True multi-source memory</b> — fusing Slack + email + transcripts + calendar into one coherent personal memory. Pieces exist (Honcho, Mem0, Letta), but no production framework does it elegantly. DIY is still the frontier.</li>
+    <li><b>Agent-to-agent memory sharing</b> — two harnesses (Claude Code + Hermes) reading the same memory store. The MCP server pattern <i>could</i> do this but no one's polished it.</li>
+    <li><b>Cross-device personal memory</b> — laptop, phone, watch, all sharing one memory. The privacy story isn't there yet (embeddings leak ~94% reconstruction of sensitive attributes per <a href="https://arxiv.org/abs/2504.15965" target="_blank">arXiv:2504.15965</a>).</li>
+    <li><b>Reliable autonomy beyond ~30 minutes</b> — agents that run unsupervised for hours and don't drift, hallucinate, or run up bills. Anthropic's measuring-agent-autonomy work confirms this is the open frontier.</li>
+    <li><b>"Plug-in" personal AI</b> — drop a folder of your data, get a daily-driver. Khoj and Reor are closest. Still rough.</li>
+  </ul>
+
+  <h2><span class="num">08</span>Open questions worth experimenting with</h2>
+  <ul>
+    <li>Does HRR's compositional memory actually outperform vanilla cosine retrieval for <i>your</i> query patterns? Worth A/B-ing if you choose Hermes.</li>
+    <li>How many MCP servers can you connect before tool-selection accuracy drops? Run the experiment with 5, 10, 15. Lazy-loading saves you, but at what cost.</li>
+    <li>Stateful cron + same thread_id over weeks: does context drift kill it? Or does dreaming-style consolidation rescue it?</li>
+    <li>For multi-agent setups, is single-writer + many-readers actually robust enough? Or do you need a coordination layer?</li>
+    <li>Trust-gradient experiment on yourself: can you get to 60% auto-approve in 90 days, or does friction win?</li>
+  </ul>
+
+  <footer>
+    <span>~/Galaxy/Grove/search/search-research/harnesses.html</span>
+    <span>agent-readable: <a href="llms.txt">llms.txt</a> · <a href="harnesses.json">harnesses.json</a> · <a href="agents.json">agents.json</a> · <a href="papers.json">papers.json</a></span>
+  </footer>
+</main>
+
+<script>
+async function loadHarnesses() {
+  try {
+    const r = await fetch('harnesses.json');
+    const data = await r.json();
+    const tbody = document.getElementById('harnesses-tbody');
+    tbody.innerHTML = data.harnesses.map(h => {
+      const isPick = h.verdict.startsWith('★');
+      const isStrong = h.verdict.startsWith('★★');
+      const cls = (isPick || isStrong) ? 'pick-row' : '';
+      const repo = h.repo === '—' ? '' : `<a href="https://github.com/${h.repo}" target="_blank">${h.repo}</a>`;
+      const licClass = h.license.includes('proprietary') ? 'proprietary' : '';
+      return `
+        <tr class="harness-row ${cls}">
+          <td>
+            <span class="name">${h.name}</span>
+            <span class="by">by ${h.by}</span>
+          </td>
+          <td>${h.loop}</td>
+          <td>${h.context}</td>
+          <td>${h.state}</td>
+          <td>${h.mcp}</td>
+          <td>${h.models}<br><span class="lic ${licClass}" style="font-size:10px;">${h.license}</span></td>
+        </tr>
+        <tr class="verdict-row"><td colspan="6">${h.verdict}</td></tr>`;
+    }).join('');
+  } catch (e) {
+    console.error('failed to load harnesses', e);
+  }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  loadHarnesses();
+  document.getElementById('ts').textContent = new Date().toISOString().slice(0, 10);
+});
+</script>
+</body>
+</html>

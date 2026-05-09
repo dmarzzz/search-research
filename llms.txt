@@ -6,9 +6,10 @@ messages. Local-first bias, opinionated, all sources cited.
 
 ## live url
 
-- page:        https://dmarzzz.github.io/search-research/
-- repo:        https://github.com/dmarzzz/search-research
-- this file:   https://dmarzzz.github.io/search-research/llms.txt
+- part i — search & tagging:  https://dmarzzz.github.io/search-research/
+- part ii — agent harnesses:  https://dmarzzz.github.io/search-research/harnesses.html
+- repo:                       https://github.com/dmarzzz/search-research
+- this file:                  https://dmarzzz.github.io/search-research/llms.txt
 
 ## what to read first
 
@@ -18,8 +19,11 @@ messages. Local-first bias, opinionated, all sources cited.
 - `papers.json` — frontier paper bibliography by area (embedding, RAG,
   tagging, evaluation, memory)
 - `stacks.json` — corpus-size keyed stack recommendations (1k / 30k / 1M / 100M)
+- `harnesses.json` — agent runtime characteristics: Claude Code, Goose,
+  Hermes, Cursor, Cline, Continue.dev, Letta, Open Interpreter, Open
+  WebUI, Aider — compared on loop / context / state / MCP / models
 
-All four are agent-fetchable. The HTML is enriched with JSON-LD describing
+All five are agent-fetchable. The HTML is enriched with JSON-LD describing
 which dataset URLs are which, so an agent that respects `application/ld+json`
 can discover the right file without parsing markup.
 
@@ -95,3 +99,43 @@ Full annotated list in `papers.json`.
   layer (Mem0/Letta/Honcho/Zep), fine-tuning. For one-user, filesystem-
   based memory (Claude Code, Cursor) is winning over DB-backed. The bet
   is observability: files you can read.
+
+## part ii — agent harnesses (harnesses.html)
+
+Once the corpus + index + MCP server exist, the next layer is the
+runtime that consumes them. Four areas:
+
+- **Hermes Agent deep dive** — ReAct-derivative loop optimized for prompt
+  cache stability. HRR (holographic) memory uses circular convolution
+  for compositional retrieval — `memory ⊛ user ⊛ role ≈ writer` — not
+  cosine similarity. v0.13 "Tenacity" (May 2026), 140K stars, Apache 2.0.
+  Plug an MCP server via `~/.hermes/config.yaml`. Pick when you need
+  cross-session learning or scheduled cron.
+
+- **Harness comparison** — Claude Code is the clear winner for personal
+  corpus + MCP (first-class MCP, plaintext state). Goose is the strong
+  fully-open alternative (multi-provider, MCP reference quality). Hermes
+  if memory-learning matters. Skip IDE-bound (Cursor, Cline, Continue),
+  Open Interpreter (no state/MCP), Aider (code-edit centric).
+
+- **MCP integration pitfalls** — tool-bloat curve: 5 servers ≈ 98%
+  accuracy, 15 servers ≈ 35% accuracy, 15 servers + lazy-load tool search
+  ≈ 91%. Practical limit: 8-12 simultaneous servers. LanceDB concurrent
+  writes are dangerous (single-writer + advisory locks). The $47k/11-day
+  infinite-loop case (Nov 2025) — hard budget enforcement matters.
+
+- **Daily-driver patterns** — "personal AI as primary tool" not yet
+  mainstream. Karpathy's three-layer stack (tab-complete + Claude Code
+  + LLM Wiki) is the most concrete real example. Loop shapes:
+  conversational, cron-driven (Hermes ships this), event-driven, autonomous
+  (avoid). Trust gradient: 20% auto-approve at start → 40% by 750
+  sessions. Build for halfway-there; don't wait for unified agent.
+
+## recommended path forward
+
+1. Build minimal MCP server (~30 lines) — covered in §10 of part i
+2. Use Claude Code as daily driver — first-class MCP, plaintext state
+3. Add ONE cron-driven loop for a specific task
+4. Layer in dreaming-style consolidation when memory growth hurts
+5. Don't pursue full autonomy — trust gradient says aim for "background
+   runner" not "fully autonomous agent". Cost runaway risk is real.
